@@ -1,0 +1,687 @@
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.8/userguide/gradle_daemon.html.
+:samza-api:generatePomFileForMavenJavaPublication
+:samza-api:compileJava UP-TO-DATE
+:samza-api:processResources UP-TO-DATE
+:samza-api:classes UP-TO-DATE
+:samza-api:jar UP-TO-DATE
+:samza-api:publishMavenJavaPublicationToMavenLocal
+:samza-api:publishToMavenLocal
+:samza-autoscaling_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:compileJava UP-TO-DATE
+:samza-core_2.11:compileScala UP-TO-DATE
+:samza-core_2.11:processResources UP-TO-DATE
+:samza-core_2.11:classes UP-TO-DATE
+:samza-core_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:compileJava UP-TO-DATE
+:samza-autoscaling_2.11:compileScala UP-TO-DATE
+:samza-autoscaling_2.11:processResources UP-TO-DATE
+:samza-autoscaling_2.11:classes UP-TO-DATE
+:samza-autoscaling_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-autoscaling_2.11:publishToMavenLocal
+:samza-aws:generatePomFileForMavenJavaPublication
+:samza-aws:compileJava UP-TO-DATE
+:samza-aws:processResources UP-TO-DATE
+:samza-aws:classes UP-TO-DATE
+:samza-aws:jar UP-TO-DATE
+:samza-aws:publishMavenJavaPublicationToMavenLocal
+:samza-aws:publishToMavenLocal
+:samza-azure:generatePomFileForMavenJavaPublication
+:samza-azure:compileJava UP-TO-DATE
+:samza-azure:processResources UP-TO-DATE
+:samza-azure:classes UP-TO-DATE
+:samza-azure:jar UP-TO-DATE
+:samza-azure:publishMavenJavaPublicationToMavenLocal
+:samza-azure:publishToMavenLocal
+:samza-core_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-core_2.11:publishToMavenLocal
+:samza-elasticsearch:generatePomFileForMavenJavaPublication
+:samza-elasticsearch:compileJava UP-TO-DATE
+:samza-elasticsearch:processResources UP-TO-DATE
+:samza-elasticsearch:classes UP-TO-DATE
+:samza-elasticsearch:jar UP-TO-DATE
+:samza-elasticsearch:publishMavenJavaPublicationToMavenLocal
+:samza-elasticsearch:publishToMavenLocal
+:samza-hdfs_2.11:generatePomFileForMavenJavaPublication
+:samza-yarn_2.11:compileJava UP-TO-DATE
+:samza-yarn_2.11:compileScala UP-TO-DATE
+:samza-yarn_2.11:processResources UP-TO-DATE
+:samza-yarn_2.11:classes UP-TO-DATE
+:samza-yarn_2.11:lesscss UP-TO-DATE
+:samza-yarn_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:compileJava UP-TO-DATE
+:samza-hdfs_2.11:compileScala UP-TO-DATE
+:samza-hdfs_2.11:processResources UP-TO-DATE
+:samza-hdfs_2.11:classes UP-TO-DATE
+:samza-hdfs_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-hdfs_2.11:publishToMavenLocal
+:samza-kafka_2.11:generatePomFileForMavenJavaPublication
+:samza-kafka_2.11:compileJava UP-TO-DATE
+:samza-kafka_2.11:compileScala UP-TO-DATE
+:samza-kafka_2.11:processResources UP-TO-DATE
+:samza-kafka_2.11:classes UP-TO-DATE
+:samza-kafka_2.11:jar UP-TO-DATE
+:samza-kafka_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kafka_2.11:publishToMavenLocal
+:samza-kv-inmemory_2.11:generatePomFileForMavenJavaPublication
+:samza-kv_2.11:compileJava UP-TO-DATE
+:samza-kv_2.11:compileScala
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/ScalableKeyValueStorageEngine.scala:102: error: type mismatch;
+[ant:scalac]  found   : org.apache.samza.storage.kv.KeyValueIterator[K,V]
+[ant:scalac]  required: org.apache.samza.storage.kv.KeyValueIterator[?0,?1]
+[ant:scalac]       wrapperStore.all()
+[ant:scalac]                       ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/ScalableKeyValueStorageEngine.scala:122: error: no type parameters for method doPutAll: (store: org.apache.samza.storage.kv.KeyValueStore[Key,Value], entries: java.util.List[org.apache.samza.storage.kv.Entry[Key,Value]])Unit exist so that it can be applied to arguments (org.apache.samza.storage.kv.ScalableKeyValueStore[Array[Byte],Array[Byte]], java.util.ArrayList[org.apache.samza.storage.kv.Entry[Array[Byte],Array[Byte]]])
+[ant:scalac]  --- because ---
+[ant:scalac] argument expression's type is not compatible with formal parameter type;
+[ant:scalac]  found   : org.apache.samza.storage.kv.ScalableKeyValueStore[Array[Byte],Array[Byte]]
+[ant:scalac]  required: org.apache.samza.storage.kv.KeyValueStore[?Key,?Value]
+[ant:scalac] 
+[ant:scalac]         doPutAll(rawStore, batch)
+[ant:scalac]         ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/ScalableKeyValueStorageEngine.scala:122: error: type mismatch;
+[ant:scalac]  found   : org.apache.samza.storage.kv.ScalableKeyValueStore[Array[Byte],Array[Byte]]
+[ant:scalac]  required: org.apache.samza.storage.kv.KeyValueStore[Key,Value]
+[ant:scalac] Note: Any >: Key (and org.apache.samza.storage.kv.ScalableKeyValueStore[Array[Byte],Array[Byte]] <: org.apache.samza.storage.kv.KeyValueStore[_, _]), but Java-defined trait KeyValueStore is invariant in type K.
+[ant:scalac] You may wish to investigate a wildcard type such as `_ >: Key`. (SLS 3.2.10)
+[ant:scalac] Note: Any >: Value (and org.apache.samza.storage.kv.ScalableKeyValueStore[Array[Byte],Array[Byte]] <: org.apache.samza.storage.kv.KeyValueStore[_, _]), but Java-defined trait KeyValueStore is invariant in type V.
+[ant:scalac] You may wish to investigate a wildcard type such as `_ >: Value`. (SLS 3.2.10)
+[ant:scalac]         doPutAll(rawStore, batch)
+[ant:scalac]                  ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/ScalableKeyValueStorageEngine.scala:122: error: type mismatch;
+[ant:scalac]  found   : java.util.ArrayList[org.apache.samza.storage.kv.Entry[Array[Byte],Array[Byte]]]
+[ant:scalac]  required: java.util.List[org.apache.samza.storage.kv.Entry[Key,Value]]
+[ant:scalac]         doPutAll(rawStore, batch)
+[ant:scalac]                            ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/ScalableKeyValueStorageEngine.scala:146: error: no type parameters for method doPutAll: (store: org.apache.samza.storage.kv.KeyValueStore[Key,Value], entries: java.util.List[org.apache.samza.storage.kv.Entry[Key,Value]])Unit exist so that it can be applied to arguments (org.apache.samza.storage.kv.ScalableKeyValueStore[Array[Byte],Array[Byte]], java.util.ArrayList[org.apache.samza.storage.kv.Entry[Array[Byte],Array[Byte]]])
+[ant:scalac]  --- because ---
+[ant:scalac] argument expression's type is not compatible with formal parameter type;
+[ant:scalac]  found   : org.apache.samza.storage.kv.ScalableKeyValueStore[Array[Byte],Array[Byte]]
+[ant:scalac]  required: org.apache.samza.storage.kv.KeyValueStore[?Key,?Value]
+[ant:scalac] 
+[ant:scalac]       doPutAll(rawStore, batch)
+[ant:scalac]       ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/ScalableKeyValueStorageEngine.scala:146: error: type mismatch;
+[ant:scalac]  found   : org.apache.samza.storage.kv.ScalableKeyValueStore[Array[Byte],Array[Byte]]
+[ant:scalac]  required: org.apache.samza.storage.kv.KeyValueStore[Key,Value]
+[ant:scalac] Note: Any >: Key (and org.apache.samza.storage.kv.ScalableKeyValueStore[Array[Byte],Array[Byte]] <: org.apache.samza.storage.kv.KeyValueStore[_, _]), but Java-defined trait KeyValueStore is invariant in type K.
+[ant:scalac] You may wish to investigate a wildcard type such as `_ >: Key`. (SLS 3.2.10)
+[ant:scalac] Note: Any >: Value (and org.apache.samza.storage.kv.ScalableKeyValueStore[Array[Byte],Array[Byte]] <: org.apache.samza.storage.kv.KeyValueStore[_, _]), but Java-defined trait KeyValueStore is invariant in type V.
+[ant:scalac] You may wish to investigate a wildcard type such as `_ >: Value`. (SLS 3.2.10)
+[ant:scalac]       doPutAll(rawStore, batch)
+[ant:scalac]                ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/ScalableKeyValueStorageEngine.scala:146: error: type mismatch;
+[ant:scalac]  found   : java.util.ArrayList[org.apache.samza.storage.kv.Entry[Array[Byte],Array[Byte]]]
+[ant:scalac]  required: java.util.List[org.apache.samza.storage.kv.Entry[Key,Value]]
+[ant:scalac]       doPutAll(rawStore, batch)
+[ant:scalac]                          ^
+[ant:scalac] 7 errors found
+:samza-kv_2.11:compileScala FAILED
+
+BUILD FAILED
+
+Total time: 12.0 secs
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.8/userguide/gradle_daemon.html.
+:samza-api:generatePomFileForMavenJavaPublication
+:samza-api:compileJava UP-TO-DATE
+:samza-api:processResources UP-TO-DATE
+:samza-api:classes UP-TO-DATE
+:samza-api:jar UP-TO-DATE
+:samza-api:publishMavenJavaPublicationToMavenLocal
+:samza-api:publishToMavenLocal
+:samza-autoscaling_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:compileJava UP-TO-DATE
+:samza-core_2.11:compileScala UP-TO-DATE
+:samza-core_2.11:processResources UP-TO-DATE
+:samza-core_2.11:classes UP-TO-DATE
+:samza-core_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:compileJava UP-TO-DATE
+:samza-autoscaling_2.11:compileScala UP-TO-DATE
+:samza-autoscaling_2.11:processResources UP-TO-DATE
+:samza-autoscaling_2.11:classes UP-TO-DATE
+:samza-autoscaling_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-autoscaling_2.11:publishToMavenLocal
+:samza-aws:generatePomFileForMavenJavaPublication
+:samza-aws:compileJava UP-TO-DATE
+:samza-aws:processResources UP-TO-DATE
+:samza-aws:classes UP-TO-DATE
+:samza-aws:jar UP-TO-DATE
+:samza-aws:publishMavenJavaPublicationToMavenLocal
+:samza-aws:publishToMavenLocal
+:samza-azure:generatePomFileForMavenJavaPublication
+:samza-azure:compileJava UP-TO-DATE
+:samza-azure:processResources UP-TO-DATE
+:samza-azure:classes UP-TO-DATE
+:samza-azure:jar UP-TO-DATE
+:samza-azure:publishMavenJavaPublicationToMavenLocal
+:samza-azure:publishToMavenLocal
+:samza-core_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-core_2.11:publishToMavenLocal
+:samza-elasticsearch:generatePomFileForMavenJavaPublication
+:samza-elasticsearch:compileJava UP-TO-DATE
+:samza-elasticsearch:processResources UP-TO-DATE
+:samza-elasticsearch:classes UP-TO-DATE
+:samza-elasticsearch:jar UP-TO-DATE
+:samza-elasticsearch:publishMavenJavaPublicationToMavenLocal
+:samza-elasticsearch:publishToMavenLocal
+:samza-hdfs_2.11:generatePomFileForMavenJavaPublication
+:samza-yarn_2.11:compileJava UP-TO-DATE
+:samza-yarn_2.11:compileScala UP-TO-DATE
+:samza-yarn_2.11:processResources UP-TO-DATE
+:samza-yarn_2.11:classes UP-TO-DATE
+:samza-yarn_2.11:lesscss UP-TO-DATE
+:samza-yarn_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:compileJava UP-TO-DATE
+:samza-hdfs_2.11:compileScala UP-TO-DATE
+:samza-hdfs_2.11:processResources UP-TO-DATE
+:samza-hdfs_2.11:classes UP-TO-DATE
+:samza-hdfs_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-hdfs_2.11:publishToMavenLocal
+:samza-kafka_2.11:generatePomFileForMavenJavaPublication
+:samza-kafka_2.11:compileJava UP-TO-DATE
+:samza-kafka_2.11:compileScala UP-TO-DATE
+:samza-kafka_2.11:processResources UP-TO-DATE
+:samza-kafka_2.11:classes UP-TO-DATE
+:samza-kafka_2.11:jar UP-TO-DATE
+:samza-kafka_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kafka_2.11:publishToMavenLocal
+:samza-kv-inmemory_2.11:generatePomFileForMavenJavaPublication
+:samza-kv_2.11:compileJava UP-TO-DATE
+:samza-kv_2.11:compileScala
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/ScalableKeyValueStorageEngine.scala:102: error: type mismatch;
+[ant:scalac]  found   : org.apache.samza.storage.kv.KeyValueIterator[K,V]
+[ant:scalac]  required: org.apache.samza.storage.kv.KeyValueIterator[?0,?1]
+[ant:scalac]       wrapperStore.all()
+[ant:scalac]                       ^
+[ant:scalac] one error found
+:samza-kv_2.11:compileScala FAILED
+
+BUILD FAILED
+
+Total time: 11.816 secs
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.8/userguide/gradle_daemon.html.
+:samza-api:generatePomFileForMavenJavaPublication
+:samza-api:compileJava UP-TO-DATE
+:samza-api:processResources UP-TO-DATE
+:samza-api:classes UP-TO-DATE
+:samza-api:jar UP-TO-DATE
+:samza-api:publishMavenJavaPublicationToMavenLocal
+:samza-api:publishToMavenLocal
+:samza-autoscaling_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:compileJava UP-TO-DATE
+:samza-core_2.11:compileScala UP-TO-DATE
+:samza-core_2.11:processResources UP-TO-DATE
+:samza-core_2.11:classes UP-TO-DATE
+:samza-core_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:compileJava UP-TO-DATE
+:samza-autoscaling_2.11:compileScala UP-TO-DATE
+:samza-autoscaling_2.11:processResources UP-TO-DATE
+:samza-autoscaling_2.11:classes UP-TO-DATE
+:samza-autoscaling_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-autoscaling_2.11:publishToMavenLocal
+:samza-aws:generatePomFileForMavenJavaPublication
+:samza-aws:compileJava UP-TO-DATE
+:samza-aws:processResources UP-TO-DATE
+:samza-aws:classes UP-TO-DATE
+:samza-aws:jar UP-TO-DATE
+:samza-aws:publishMavenJavaPublicationToMavenLocal
+:samza-aws:publishToMavenLocal
+:samza-azure:generatePomFileForMavenJavaPublication
+:samza-azure:compileJava UP-TO-DATE
+:samza-azure:processResources UP-TO-DATE
+:samza-azure:classes UP-TO-DATE
+:samza-azure:jar UP-TO-DATE
+:samza-azure:publishMavenJavaPublicationToMavenLocal
+:samza-azure:publishToMavenLocal
+:samza-core_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-core_2.11:publishToMavenLocal
+:samza-elasticsearch:generatePomFileForMavenJavaPublication
+:samza-elasticsearch:compileJava UP-TO-DATE
+:samza-elasticsearch:processResources UP-TO-DATE
+:samza-elasticsearch:classes UP-TO-DATE
+:samza-elasticsearch:jar UP-TO-DATE
+:samza-elasticsearch:publishMavenJavaPublicationToMavenLocal
+:samza-elasticsearch:publishToMavenLocal
+:samza-hdfs_2.11:generatePomFileForMavenJavaPublication
+:samza-yarn_2.11:compileJava UP-TO-DATE
+:samza-yarn_2.11:compileScala UP-TO-DATE
+:samza-yarn_2.11:processResources UP-TO-DATE
+:samza-yarn_2.11:classes UP-TO-DATE
+:samza-yarn_2.11:lesscss UP-TO-DATE
+:samza-yarn_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:compileJava UP-TO-DATE
+:samza-hdfs_2.11:compileScala UP-TO-DATE
+:samza-hdfs_2.11:processResources UP-TO-DATE
+:samza-hdfs_2.11:classes UP-TO-DATE
+:samza-hdfs_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-hdfs_2.11:publishToMavenLocal
+:samza-kafka_2.11:generatePomFileForMavenJavaPublication
+:samza-kafka_2.11:compileJava UP-TO-DATE
+:samza-kafka_2.11:compileScala UP-TO-DATE
+:samza-kafka_2.11:processResources UP-TO-DATE
+:samza-kafka_2.11:classes UP-TO-DATE
+:samza-kafka_2.11:jar UP-TO-DATE
+:samza-kafka_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kafka_2.11:publishToMavenLocal
+:samza-kv-inmemory_2.11:generatePomFileForMavenJavaPublication
+:samza-kv_2.11:compileJava UP-TO-DATE
+:samza-kv_2.11:compileScala
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/ScalableKeyValueStorageEngine.scala:102: error: type mismatch;
+[ant:scalac]  found   : org.apache.samza.storage.kv.KeyValueIterator[K,V]
+[ant:scalac]  required: org.apache.samza.storage.kv.KeyValueIterator[?0,?1]
+[ant:scalac]       wrapperStore.all()
+[ant:scalac]                       ^
+[ant:scalac] one error found
+:samza-kv_2.11:compileScala FAILED
+
+BUILD FAILED
+
+Total time: 11.501 secs
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.8/userguide/gradle_daemon.html.
+:samza-api:generatePomFileForMavenJavaPublication
+:samza-api:compileJava UP-TO-DATE
+:samza-api:processResources UP-TO-DATE
+:samza-api:classes UP-TO-DATE
+:samza-api:jar UP-TO-DATE
+:samza-api:publishMavenJavaPublicationToMavenLocal
+:samza-api:publishToMavenLocal
+:samza-autoscaling_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:compileJava UP-TO-DATE
+:samza-core_2.11:compileScala UP-TO-DATE
+:samza-core_2.11:processResources UP-TO-DATE
+:samza-core_2.11:classes UP-TO-DATE
+:samza-core_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:compileJava UP-TO-DATE
+:samza-autoscaling_2.11:compileScala UP-TO-DATE
+:samza-autoscaling_2.11:processResources UP-TO-DATE
+:samza-autoscaling_2.11:classes UP-TO-DATE
+:samza-autoscaling_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-autoscaling_2.11:publishToMavenLocal
+:samza-aws:generatePomFileForMavenJavaPublication
+:samza-aws:compileJava UP-TO-DATE
+:samza-aws:processResources UP-TO-DATE
+:samza-aws:classes UP-TO-DATE
+:samza-aws:jar UP-TO-DATE
+:samza-aws:publishMavenJavaPublicationToMavenLocal
+:samza-aws:publishToMavenLocal
+:samza-azure:generatePomFileForMavenJavaPublication
+:samza-azure:compileJava UP-TO-DATE
+:samza-azure:processResources UP-TO-DATE
+:samza-azure:classes UP-TO-DATE
+:samza-azure:jar UP-TO-DATE
+:samza-azure:publishMavenJavaPublicationToMavenLocal
+:samza-azure:publishToMavenLocal
+:samza-core_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-core_2.11:publishToMavenLocal
+:samza-elasticsearch:generatePomFileForMavenJavaPublication
+:samza-elasticsearch:compileJava UP-TO-DATE
+:samza-elasticsearch:processResources UP-TO-DATE
+:samza-elasticsearch:classes UP-TO-DATE
+:samza-elasticsearch:jar UP-TO-DATE
+:samza-elasticsearch:publishMavenJavaPublicationToMavenLocal
+:samza-elasticsearch:publishToMavenLocal
+:samza-hdfs_2.11:generatePomFileForMavenJavaPublication
+:samza-yarn_2.11:compileJava UP-TO-DATE
+:samza-yarn_2.11:compileScala UP-TO-DATE
+:samza-yarn_2.11:processResources UP-TO-DATE
+:samza-yarn_2.11:classes UP-TO-DATE
+:samza-yarn_2.11:lesscss UP-TO-DATE
+:samza-yarn_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:compileJava UP-TO-DATE
+:samza-hdfs_2.11:compileScala UP-TO-DATE
+:samza-hdfs_2.11:processResources UP-TO-DATE
+:samza-hdfs_2.11:classes UP-TO-DATE
+:samza-hdfs_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-hdfs_2.11:publishToMavenLocal
+:samza-kafka_2.11:generatePomFileForMavenJavaPublication
+:samza-kafka_2.11:compileJava UP-TO-DATE
+:samza-kafka_2.11:compileScala UP-TO-DATE
+:samza-kafka_2.11:processResources UP-TO-DATE
+:samza-kafka_2.11:classes UP-TO-DATE
+:samza-kafka_2.11:jar UP-TO-DATE
+:samza-kafka_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kafka_2.11:publishToMavenLocal
+:samza-kv-inmemory_2.11:generatePomFileForMavenJavaPublication
+:samza-kv_2.11:compileJava UP-TO-DATE
+:samza-kv_2.11:compileScala
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/CachedStore.scala:60: warning: class DoubleLinkedList in package mutable is deprecated: Low-level linked lists are deprecated due to idiosyncrasies in interface and incomplete features.
+[ant:scalac]   private var dirty = new mutable.DoubleLinkedList[K]()
+[ant:scalac]                                   ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/CachedStore.scala:158: warning: class DoubleLinkedList in package mutable is deprecated: Low-level linked lists are deprecated due to idiosyncrasies in interface and incomplete features.
+[ant:scalac]       this.dirty = new mutable.DoubleLinkedList(key, this.dirty)
+[ant:scalac]                                ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/CachedStore.scala:216: warning: class DoubleLinkedList in package mutable is deprecated: Low-level linked lists are deprecated due to idiosyncrasies in interface and incomplete features.
+[ant:scalac]     this.dirty = new mutable.DoubleLinkedList[K]()
+[ant:scalac]                              ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv/src/main/scala/org/apache/samza/storage/kv/CachedStore.scala:295: warning: class DoubleLinkedList in package mutable is deprecated: Low-level linked lists are deprecated due to idiosyncrasies in interface and incomplete features.
+[ant:scalac] private case class CacheEntry[K, V](var value: V, var dirty: mutable.DoubleLinkedList[K])
+[ant:scalac]                                                                      ^
+[ant:scalac] four warnings found
+:samza-kv_2.11:processResources UP-TO-DATE
+:samza-kv_2.11:classes
+:samza-kv_2.11:jar
+:samza-kv-inmemory_2.11:compileJava UP-TO-DATE
+:samza-kv-inmemory_2.11:compileScala
+:samza-kv-inmemory_2.11:processResources UP-TO-DATE
+:samza-kv-inmemory_2.11:classes
+:samza-kv-inmemory_2.11:jar UP-TO-DATE
+:samza-kv-inmemory_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kv-inmemory_2.11:publishToMavenLocal
+:samza-kv-rocksdb_2.11:generatePomFileForMavenJavaPublication
+:samza-kv-rocksdb_2.11:compileJava UP-TO-DATE
+:samza-kv-rocksdb_2.11:compileScala FAILED
+
+BUILD FAILED
+
+Total time: 17.242 secs
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.8/userguide/gradle_daemon.html.
+:samza-api:generatePomFileForMavenJavaPublication
+:samza-api:compileJava UP-TO-DATE
+:samza-api:processResources UP-TO-DATE
+:samza-api:classes UP-TO-DATE
+:samza-api:jar UP-TO-DATE
+:samza-api:publishMavenJavaPublicationToMavenLocal
+:samza-api:publishToMavenLocal
+:samza-autoscaling_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:compileJava UP-TO-DATE
+:samza-core_2.11:compileScala UP-TO-DATE
+:samza-core_2.11:processResources UP-TO-DATE
+:samza-core_2.11:classes UP-TO-DATE
+:samza-core_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:compileJava UP-TO-DATE
+:samza-autoscaling_2.11:compileScala UP-TO-DATE
+:samza-autoscaling_2.11:processResources UP-TO-DATE
+:samza-autoscaling_2.11:classes UP-TO-DATE
+:samza-autoscaling_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-autoscaling_2.11:publishToMavenLocal
+:samza-aws:generatePomFileForMavenJavaPublication
+:samza-aws:compileJava UP-TO-DATE
+:samza-aws:processResources UP-TO-DATE
+:samza-aws:classes UP-TO-DATE
+:samza-aws:jar UP-TO-DATE
+:samza-aws:publishMavenJavaPublicationToMavenLocal
+:samza-aws:publishToMavenLocal
+:samza-azure:generatePomFileForMavenJavaPublication
+:samza-azure:compileJava UP-TO-DATE
+:samza-azure:processResources UP-TO-DATE
+:samza-azure:classes UP-TO-DATE
+:samza-azure:jar UP-TO-DATE
+:samza-azure:publishMavenJavaPublicationToMavenLocal
+:samza-azure:publishToMavenLocal
+:samza-core_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-core_2.11:publishToMavenLocal
+:samza-elasticsearch:generatePomFileForMavenJavaPublication
+:samza-elasticsearch:compileJava UP-TO-DATE
+:samza-elasticsearch:processResources UP-TO-DATE
+:samza-elasticsearch:classes UP-TO-DATE
+:samza-elasticsearch:jar UP-TO-DATE
+:samza-elasticsearch:publishMavenJavaPublicationToMavenLocal
+:samza-elasticsearch:publishToMavenLocal
+:samza-hdfs_2.11:generatePomFileForMavenJavaPublication
+:samza-yarn_2.11:compileJava UP-TO-DATE
+:samza-yarn_2.11:compileScala UP-TO-DATE
+:samza-yarn_2.11:processResources UP-TO-DATE
+:samza-yarn_2.11:classes UP-TO-DATE
+:samza-yarn_2.11:lesscss UP-TO-DATE
+:samza-yarn_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:compileJava UP-TO-DATE
+:samza-hdfs_2.11:compileScala UP-TO-DATE
+:samza-hdfs_2.11:processResources UP-TO-DATE
+:samza-hdfs_2.11:classes UP-TO-DATE
+:samza-hdfs_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-hdfs_2.11:publishToMavenLocal
+:samza-kafka_2.11:generatePomFileForMavenJavaPublication
+:samza-kafka_2.11:compileJava UP-TO-DATE
+:samza-kafka_2.11:compileScala UP-TO-DATE
+:samza-kafka_2.11:processResources UP-TO-DATE
+:samza-kafka_2.11:classes UP-TO-DATE
+:samza-kafka_2.11:jar UP-TO-DATE
+:samza-kafka_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kafka_2.11:publishToMavenLocal
+:samza-kv-inmemory_2.11:generatePomFileForMavenJavaPublication
+:samza-kv_2.11:compileJava UP-TO-DATE
+:samza-kv_2.11:compileScala UP-TO-DATE
+:samza-kv_2.11:processResources UP-TO-DATE
+:samza-kv_2.11:classes UP-TO-DATE
+:samza-kv_2.11:jar UP-TO-DATE
+:samza-kv-inmemory_2.11:compileJava UP-TO-DATE
+:samza-kv-inmemory_2.11:compileScala UP-TO-DATE
+:samza-kv-inmemory_2.11:processResources UP-TO-DATE
+:samza-kv-inmemory_2.11:classes UP-TO-DATE
+:samza-kv-inmemory_2.11:jar UP-TO-DATE
+:samza-kv-inmemory_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kv-inmemory_2.11:publishToMavenLocal
+:samza-kv-rocksdb_2.11:generatePomFileForMavenJavaPublication
+:samza-kv-rocksdb_2.11:compileJava UP-TO-DATE
+:samza-kv-rocksdb_2.11:compileScala
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:78: error: object java.util.Set is not a value
+[ant:scalac]       val rocksDbMetrics = Set (
+[ant:scalac]                            ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:268: error: value cache is not a member of object org.rocksdb.LRUCache
+[ant:scalac]     LRUCache cache = RocksDbOptionsHelper.getCache
+[ant:scalac]              ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:269: error: not found: value MemoryUtil
+[ant:scalac]     MemoryUtil.cacheResize(cache, memoryMb * 1024)
+[ant:scalac]     ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:269: error: not found: value cache
+[ant:scalac]     MemoryUtil.cacheResize(cache, memoryMb * 1024)
+[ant:scalac]                            ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:273: error: value cache is not a member of object org.rocksdb.LRUCache
+[ant:scalac]     LRUCache cache = RocksDbOptionsHelper.getCache
+[ant:scalac]              ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:275: error: type mismatch;
+[ant:scalac]  found   : RocksDbScalableKeyValueStore.this.db.type (with underlying type org.rocksdb.RocksDB)
+[ant:scalac]  required: Nothing
+[ant:scalac]     dbs.add(db)
+[ant:scalac]             ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:277: error: not found: value cache
+[ant:scalac]     caches.add(cache)
+[ant:scalac]                ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:278: error: not found: value MemoryUtil
+[ant:scalac]     var usage = MemoryUtil.getApproximateMemoryUsageByType(dbs, caches)
+[ant:scalac]                 ^
+[ant:scalac] 8 errors found
+:samza-kv-rocksdb_2.11:compileScala FAILED
+
+BUILD FAILED
+
+Total time: 11.504 secs
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.8/userguide/gradle_daemon.html.
+:samza-api:generatePomFileForMavenJavaPublication
+:samza-api:compileJava UP-TO-DATE
+:samza-api:processResources UP-TO-DATE
+:samza-api:classes UP-TO-DATE
+:samza-api:jar UP-TO-DATE
+:samza-api:publishMavenJavaPublicationToMavenLocal
+:samza-api:publishToMavenLocal
+:samza-autoscaling_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:compileJava UP-TO-DATE
+:samza-core_2.11:compileScala UP-TO-DATE
+:samza-core_2.11:processResources UP-TO-DATE
+:samza-core_2.11:classes UP-TO-DATE
+:samza-core_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:compileJava UP-TO-DATE
+:samza-autoscaling_2.11:compileScala UP-TO-DATE
+:samza-autoscaling_2.11:processResources UP-TO-DATE
+:samza-autoscaling_2.11:classes UP-TO-DATE
+:samza-autoscaling_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-autoscaling_2.11:publishToMavenLocal
+:samza-aws:generatePomFileForMavenJavaPublication
+:samza-aws:compileJava UP-TO-DATE
+:samza-aws:processResources UP-TO-DATE
+:samza-aws:classes UP-TO-DATE
+:samza-aws:jar UP-TO-DATE
+:samza-aws:publishMavenJavaPublicationToMavenLocal
+:samza-aws:publishToMavenLocal
+:samza-azure:generatePomFileForMavenJavaPublication
+:samza-azure:compileJava UP-TO-DATE
+:samza-azure:processResources UP-TO-DATE
+:samza-azure:classes UP-TO-DATE
+:samza-azure:jar UP-TO-DATE
+:samza-azure:publishMavenJavaPublicationToMavenLocal
+:samza-azure:publishToMavenLocal
+:samza-core_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-core_2.11:publishToMavenLocal
+:samza-elasticsearch:generatePomFileForMavenJavaPublication
+:samza-elasticsearch:compileJava UP-TO-DATE
+:samza-elasticsearch:processResources UP-TO-DATE
+:samza-elasticsearch:classes UP-TO-DATE
+:samza-elasticsearch:jar UP-TO-DATE
+:samza-elasticsearch:publishMavenJavaPublicationToMavenLocal
+:samza-elasticsearch:publishToMavenLocal
+:samza-hdfs_2.11:generatePomFileForMavenJavaPublication
+:samza-yarn_2.11:compileJava UP-TO-DATE
+:samza-yarn_2.11:compileScala UP-TO-DATE
+:samza-yarn_2.11:processResources UP-TO-DATE
+:samza-yarn_2.11:classes UP-TO-DATE
+:samza-yarn_2.11:lesscss UP-TO-DATE
+:samza-yarn_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:compileJava UP-TO-DATE
+:samza-hdfs_2.11:compileScala UP-TO-DATE
+:samza-hdfs_2.11:processResources UP-TO-DATE
+:samza-hdfs_2.11:classes UP-TO-DATE
+:samza-hdfs_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-hdfs_2.11:publishToMavenLocal
+:samza-kafka_2.11:generatePomFileForMavenJavaPublication
+:samza-kafka_2.11:compileJava UP-TO-DATE
+:samza-kafka_2.11:compileScala UP-TO-DATE
+:samza-kafka_2.11:processResources UP-TO-DATE
+:samza-kafka_2.11:classes UP-TO-DATE
+:samza-kafka_2.11:jar UP-TO-DATE
+:samza-kafka_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kafka_2.11:publishToMavenLocal
+:samza-kv-inmemory_2.11:generatePomFileForMavenJavaPublication
+:samza-kv_2.11:compileJava UP-TO-DATE
+:samza-kv_2.11:compileScala UP-TO-DATE
+:samza-kv_2.11:processResources UP-TO-DATE
+:samza-kv_2.11:classes UP-TO-DATE
+:samza-kv_2.11:jar
+:samza-kv-inmemory_2.11:compileJava UP-TO-DATE
+:samza-kv-inmemory_2.11:compileScala
+:samza-kv-inmemory_2.11:processResources UP-TO-DATE
+:samza-kv-inmemory_2.11:classes
+:samza-kv-inmemory_2.11:jar UP-TO-DATE
+:samza-kv-inmemory_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kv-inmemory_2.11:publishToMavenLocal
+:samza-kv-rocksdb_2.11:generatePomFileForMavenJavaPublication
+:samza-kv-rocksdb_2.11:compileJava UP-TO-DATE
+:samza-kv-rocksdb_2.11:compileScala FAILED
+
+BUILD FAILED
+
+Total time: 13.652 secs
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.8/userguide/gradle_daemon.html.
+:samza-api:generatePomFileForMavenJavaPublication
+:samza-api:compileJava UP-TO-DATE
+:samza-api:processResources UP-TO-DATE
+:samza-api:classes UP-TO-DATE
+:samza-api:jar UP-TO-DATE
+:samza-api:publishMavenJavaPublicationToMavenLocal
+:samza-api:publishToMavenLocal
+:samza-autoscaling_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:compileJava UP-TO-DATE
+:samza-core_2.11:compileScala UP-TO-DATE
+:samza-core_2.11:processResources UP-TO-DATE
+:samza-core_2.11:classes UP-TO-DATE
+:samza-core_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:compileJava UP-TO-DATE
+:samza-autoscaling_2.11:compileScala UP-TO-DATE
+:samza-autoscaling_2.11:processResources UP-TO-DATE
+:samza-autoscaling_2.11:classes UP-TO-DATE
+:samza-autoscaling_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-autoscaling_2.11:publishToMavenLocal
+:samza-aws:generatePomFileForMavenJavaPublication
+:samza-aws:compileJava UP-TO-DATE
+:samza-aws:processResources UP-TO-DATE
+:samza-aws:classes UP-TO-DATE
+:samza-aws:jar UP-TO-DATE
+:samza-aws:publishMavenJavaPublicationToMavenLocal
+:samza-aws:publishToMavenLocal
+:samza-azure:generatePomFileForMavenJavaPublication
+:samza-azure:compileJava UP-TO-DATE
+:samza-azure:processResources UP-TO-DATE
+:samza-azure:classes UP-TO-DATE
+:samza-azure:jar UP-TO-DATE
+:samza-azure:publishMavenJavaPublicationToMavenLocal
+:samza-azure:publishToMavenLocal
+:samza-core_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-core_2.11:publishToMavenLocal
+:samza-elasticsearch:generatePomFileForMavenJavaPublication
+:samza-elasticsearch:compileJava UP-TO-DATE
+:samza-elasticsearch:processResources UP-TO-DATE
+:samza-elasticsearch:classes UP-TO-DATE
+:samza-elasticsearch:jar UP-TO-DATE
+:samza-elasticsearch:publishMavenJavaPublicationToMavenLocal
+:samza-elasticsearch:publishToMavenLocal
+:samza-hdfs_2.11:generatePomFileForMavenJavaPublication
+:samza-yarn_2.11:compileJava UP-TO-DATE
+:samza-yarn_2.11:compileScala UP-TO-DATE
+:samza-yarn_2.11:processResources UP-TO-DATE
+:samza-yarn_2.11:classes UP-TO-DATE
+:samza-yarn_2.11:lesscss UP-TO-DATE
+:samza-yarn_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:compileJava UP-TO-DATE
+:samza-hdfs_2.11:compileScala UP-TO-DATE
+:samza-hdfs_2.11:processResources UP-TO-DATE
+:samza-hdfs_2.11:classes UP-TO-DATE
+:samza-hdfs_2.11:jar UP-TO-DATE
+:samza-hdfs_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-hdfs_2.11:publishToMavenLocal
+:samza-kafka_2.11:generatePomFileForMavenJavaPublication
+:samza-kafka_2.11:compileJava UP-TO-DATE
+:samza-kafka_2.11:compileScala UP-TO-DATE
+:samza-kafka_2.11:processResources UP-TO-DATE
+:samza-kafka_2.11:classes UP-TO-DATE
+:samza-kafka_2.11:jar UP-TO-DATE
+:samza-kafka_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kafka_2.11:publishToMavenLocal
+:samza-kv-inmemory_2.11:generatePomFileForMavenJavaPublication
+:samza-kv_2.11:compileJava UP-TO-DATE
+:samza-kv_2.11:compileScala UP-TO-DATE
+:samza-kv_2.11:processResources UP-TO-DATE
+:samza-kv_2.11:classes UP-TO-DATE
+:samza-kv_2.11:jar UP-TO-DATE
+:samza-kv-inmemory_2.11:compileJava UP-TO-DATE
+:samza-kv-inmemory_2.11:compileScala UP-TO-DATE
+:samza-kv-inmemory_2.11:processResources UP-TO-DATE
+:samza-kv-inmemory_2.11:classes UP-TO-DATE
+:samza-kv-inmemory_2.11:jar UP-TO-DATE
+:samza-kv-inmemory_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-kv-inmemory_2.11:publishToMavenLocal
+:samza-kv-rocksdb_2.11:generatePomFileForMavenJavaPublication
+:samza-kv-rocksdb_2.11:compileJava UP-TO-DATE
+:samza-kv-rocksdb_2.11:compileScala
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:356: error: org.rocksdb.Comparator does not take type parameters
+[ant:scalac]   class LexicographicComparator extends Comparator[Array[Byte]] {
+[ant:scalac]                                         ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:269: error: not found: value MemoryUtil
+[ant:scalac]     MemoryUtil.cacheResize(cache, memoryMb * 1024)
+[ant:scalac]     ^
+[ant:scalac] /home/drg/projects/work2/samza-src/samza-project/samza-kv-rocksdb/src/main/scala/org/apache/samza/storage/kv/RocksDbScalableKeyValueStore.scala:278: error: not found: value MemoryUtil
+[ant:scalac]     val usage = MemoryUtil.getApproximateMemoryUsageByType(dbs, caches)
+[ant:scalac]                 ^
+[ant:scalac] three errors found
+:samza-kv-rocksdb_2.11:compileScala FAILED
+
+BUILD FAILED
+
+Total time: 11.782 secs

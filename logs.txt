@@ -1,0 +1,56 @@
+To honour the JVM settings for this build a new JVM will be forked. Please consider using the daemon: https://docs.gradle.org/2.8/userguide/gradle_daemon.html.
+:samza-api:generatePomFileForMavenJavaPublication
+:samza-api:compileJava UP-TO-DATE
+:samza-api:processResources UP-TO-DATE
+:samza-api:classes UP-TO-DATE
+:samza-api:jar UP-TO-DATE
+:samza-api:publishMavenJavaPublicationToMavenLocal
+:samza-api:publishToMavenLocal
+:samza-autoscaling_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:compileJava UP-TO-DATE
+:samza-core_2.11:compileScala UP-TO-DATE
+:samza-core_2.11:processResources UP-TO-DATE
+:samza-core_2.11:classes UP-TO-DATE
+:samza-core_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:compileJava UP-TO-DATE
+:samza-autoscaling_2.11:compileScala UP-TO-DATE
+:samza-autoscaling_2.11:processResources UP-TO-DATE
+:samza-autoscaling_2.11:classes UP-TO-DATE
+:samza-autoscaling_2.11:jar UP-TO-DATE
+:samza-autoscaling_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-autoscaling_2.11:publishToMavenLocal
+:samza-aws:generatePomFileForMavenJavaPublication
+:samza-aws:compileJava UP-TO-DATE
+:samza-aws:processResources UP-TO-DATE
+:samza-aws:classes UP-TO-DATE
+:samza-aws:jar UP-TO-DATE
+:samza-aws:publishMavenJavaPublicationToMavenLocal
+:samza-aws:publishToMavenLocal
+:samza-azure:generatePomFileForMavenJavaPublication
+:samza-azure:compileJava UP-TO-DATE
+:samza-azure:processResources UP-TO-DATE
+:samza-azure:classes UP-TO-DATE
+:samza-azure:jar UP-TO-DATE
+:samza-azure:publishMavenJavaPublicationToMavenLocal
+:samza-azure:publishToMavenLocal
+:samza-core_2.11:generatePomFileForMavenJavaPublication
+:samza-core_2.11:publishMavenJavaPublicationToMavenLocal
+:samza-core_2.11:publishToMavenLocal
+:samza-elasticsearch:generatePomFileForMavenJavaPublication
+:samza-elasticsearch:compileJava UP-TO-DATE
+:samza-elasticsearch:processResources UP-TO-DATE
+:samza-elasticsearch:classes UP-TO-DATE
+:samza-elasticsearch:jar UP-TO-DATE
+:samza-elasticsearch:publishMavenJavaPublicationToMavenLocal
+:samza-elasticsearch:publishToMavenLocal
+:samza-hdfs_2.11:generatePomFileForMavenJavaPublication
+:samza-yarn_2.11:compileJava UP-TO-DATE
+:samza-yarn_2.11:compileScala
+[ant:scalac] warning: Class org.joda.convert.FromString not found - continuing with a stub.
+[ant:scalac] warning: Class org.joda.convert.ToString not found - continuing with a stub.
+[ant:scalac] two warnings found
+:samza-yarn_2.11:compileScala FAILED
+
+BUILD FAILED
+
+Total time: 16.351 secs
