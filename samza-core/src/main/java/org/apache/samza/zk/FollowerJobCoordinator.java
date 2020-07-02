@@ -32,13 +32,13 @@ import org.apache.samza.coordinator.JobModelManager;
 import org.apache.samza.coordinator.LeaderElectorListener;
 import org.apache.samza.job.model.ContainerModel;
 import org.apache.samza.job.model.JobModel;
-import org.apache.samza.job.model.ResourceModel; // DrG
+import org.apache.samza.job.model.ExtendedJobModel; // DrG
 import org.apache.samza.job.model.ResponseModel;
 import org.apache.samza.metrics.MetricsRegistry;
 import org.apache.samza.metrics.MetricsReporter;
 import org.apache.samza.metrics.ReadableMetricsRegistry;
 import org.apache.samza.runtime.ProcessorIdGenerator;
-import org.apache.samza.serializers.model.ResourceModelMapper;
+import org.apache.samza.serializers.model.ExtendedSamzaObjectMapper;
 import org.apache.samza.serializers.model.SamzaObjectMapper;
 import org.apache.samza.storage.ChangelogStreamManager;
 import org.apache.samza.system.StreamMetadataCache;
@@ -381,9 +381,9 @@ public class FollowerJobCoordinator implements JobCoordinator {
 
                 String modelData = getModelData(jobModelVersion);
                 if (!isJobModel(modelData)){
-                    ResourceModel resourceModel = convertToResourceModel(modelData);
-                    LOG.info("pid=" + processorId + ": new ResourceModel is available. Version =" + jobModelVersion + "; ResourceModel = " + resourceModel);
-                    processResourceModel(resourceModel, jobModelVersion);
+                    ExtendedJobModel extendedJobModel = convertToExtendedJobModel(modelData);
+                    LOG.info("pid=" + processorId + ": new ExtendedJobModel is available. Version =" + jobModelVersion + "; ExtendedJobModel = " + extendedJobModel);
+                    processExtendedJobModel(extendedJobModel, jobModelVersion);
                 } else{
                     LOG.info("Got a notification for new JobModel version. Path = {} Version = {}", dataPath, data);
                     oldJobModel = newJobModel;
@@ -439,24 +439,24 @@ public class FollowerJobCoordinator implements JobCoordinator {
     }
 
     //DrG
-    private ResourceModel convertToResourceModel(String modelStr){
-        ObjectMapper mmapper = ResourceModelMapper.getObjectMapper();
-        ResourceModel jm;
+    private ExtendedJobModel convertToExtendedJobModel(String modelStr){
+        ObjectMapper mmapper = ExtendedSamzaObjectMapper.getObjectMapper();
+        ExtendedJobModel jm;
         try {
-            jm = mmapper.readValue( modelStr, ResourceModel.class);
+            jm = mmapper.readValue( modelStr, ExtendedJobModel.class);
         } catch (IOException e) {
-            throw new SamzaException("failed to read ResourceModel from ZK", e);
+            throw new SamzaException("failed to read ExtendedJobModel from ZK", e);
         }
         return jm;
     }
 
     //DrG
-    public void publishResponse(String result, ResourceModel resourceModel, String version){
-        ResponseModel response = new ResponseModel(processorId, result, resourceModel);
+    public void publishResponse(String result, ExtendedJobModel extendedJobModel, String version){
+        ResponseModel response = new ResponseModel(processorId, result, extendedJobModel);
         barrier.join(version, processorId);
         String responsePath = String.format("%s/barrier_%s", zkUtils.getKeyBuilder().getJobModelVersionBarrierPrefix(), version) + "/barrier_participants/" + processorId;
         try {
-            ObjectMapper mmapper = ResourceModelMapper.getObjectMapper();
+            ObjectMapper mmapper = ExtendedSamzaObjectMapper.getObjectMapper();
             String responseStr = mmapper.writerWithDefaultPrettyPrinter().writeValueAsString(response);
             LOG.info("responseModelAsString=" + responseStr);
             zkUtils.writeData(responsePath, responseStr);
@@ -467,28 +467,20 @@ public class FollowerJobCoordinator implements JobCoordinator {
     }
 
     //DrG
-    private void processResourceModel(ResourceModel resourceModel, String version){
-        //Doing: only update related processors' resources.
-        if (!resourceModel.getMemModels().containsKey(processorId)) {
-            LOG.info("New ResourceModel does not contain pid={}. New ResourceModel: {}",
+    private void processExtendedJobModel(ExtendedJobModel extendedJobModel, String version){
+        if (!extendedJobModel.getMemModels().containsKey(processorId)) {
+            LOG.info("New ExtendedJobModel does not contain pid={}. New ExtendedJobModel: {}",
                     processorId, newJobModel);
-//            barrier.join(jobModelVersion, processorId);
-//            stop();
         } else {
-            // stop current work
-            //if (coordinatorListener != null && coordinatorListener instanceof FollowerJobCoordinator) {
             if (coordinatorListener != null) {
-                ((FollowerJobCoordinatorListener) coordinatorListener).onNewResourceModel(processorId, resourceModel, version);
-//                coordinatorListener.onJobModelExpired();
+                ((FollowerJobCoordinatorListener) coordinatorListener).onNewExtendedJobModel(processorId, extendedJobModel, version);
             }
             isContainerModelEffected = false;
-            // update ZK and wait for all the processors to get this new version
-            //barrier.join(resourceModelVersion, processorId);
         }
     }
 
     public interface FollowerJobCoordinatorListener extends JobCoordinatorListener{
-        void onNewResourceModel(String processorId, ResourceModel resourceModel, String version);
+        void onNewExtendedJobModel(String processorId, ExtendedJobModel extendedJobModel, String version);
     }
 
 

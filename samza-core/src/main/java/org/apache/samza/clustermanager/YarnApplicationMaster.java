@@ -467,14 +467,14 @@ public class YarnApplicationMaster {
             //DrG
             @Override
             public void storeMemResize(Map<String, Long>resourceMap){
-                log.info("Try to resize the store memory of " + resourceMap.toString());
+                log.info("Try to resize the store memory: " + resourceMap.toString());
                 if(resourceMap == null){
-                    log.info("No partition-executor mapping is given, break out");
+                    log.info("No executor-memorySize mapping is given, break out");
                     return ;
                 }
-                ResourceModel resourceModel = generateResourceModel(resourceMap);
-                log.info("New ResourceModel = " + resourceModel);
-                leaderJobCoordinator.setNewResourceModel(resourceModel);
+                ExtendedJobModel extendedJobModel = generateExtendedJobModel(resourceMap);
+                log.info("New ExtendedJobModel = " + extendedJobModel);
+                leaderJobCoordinator.setNewExtendedJobModel(extendedJobModel);
             }
 
             @Override
@@ -487,10 +487,10 @@ public class YarnApplicationMaster {
         controller.start();
     }
 
-    private ResourceModel generateResourceModel(Map<String, Long> resourceMap){
+    private ExtendedJobModel generateExtendedJobModel(Map<String, Long> resourceMap){
 
         JobModel jobModel = jobModelManager.jobModel();
-        return new ResourceModel(resourceMap, jobModel);
+        return new ExtendedJobModel(resourceMap, jobModel);
     }
 
 }

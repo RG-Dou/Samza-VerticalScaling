@@ -45,7 +45,7 @@ import org.apache.samza.coordinator.JobCoordinator;
 import org.apache.samza.coordinator.JobCoordinatorFactory;
 import org.apache.samza.coordinator.JobCoordinatorListener;
 import org.apache.samza.job.model.JobModel;
-import org.apache.samza.job.model.ResourceModel;
+import org.apache.samza.job.model.ExtendedJobModel;
 import org.apache.samza.metrics.MetricsReporter;
 import org.apache.samza.runtime.ProcessorLifecycleListener;
 import org.apache.samza.task.TaskFactory;
@@ -437,13 +437,13 @@ public class NewStreamProcessor {
             }
 
             @Override
-            public void onNewResourceModel(String processorId, ResourceModel resourceModel, String version){
-                LOGGER.info("onNewResourceModel: start store memory resize for processor: {}.", processorId);
-                Long memSize = resourceModel.getMemFromProcessor(processorId);
+            public void onNewExtendedJobModel(String processorId, ExtendedJobModel extendedJobModel, String version){
+                LOGGER.info("onNewExtendedJobModel: start store memory resize for processor: {}.", processorId);
+                Long memSize = extendedJobModel.getMemFromProcessor(processorId);
                 long result = container.taskStoreMemResize(memSize);
                 String resultStr = Long.toString(result);
 //                String result = "1";
-                jobCoordinator.publishResponse(resultStr, resourceModel, version);
+                jobCoordinator.publishResponse(resultStr, extendedJobModel, version);
             }
         };
     }

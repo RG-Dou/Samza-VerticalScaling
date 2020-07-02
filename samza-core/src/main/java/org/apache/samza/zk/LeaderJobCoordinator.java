@@ -33,13 +33,13 @@ import org.apache.samza.coordinator.JobModelManager;
 import org.apache.samza.coordinator.LeaderElectorListener;
 import org.apache.samza.job.model.ContainerModel;
 import org.apache.samza.job.model.JobModel;
-import org.apache.samza.job.model.ResourceModel;
+import org.apache.samza.job.model.ExtendedJobModel;
 import org.apache.samza.job.model.ResponseModel;
 import org.apache.samza.metrics.MetricsRegistry;
 import org.apache.samza.metrics.MetricsReporter;
 import org.apache.samza.metrics.ReadableMetricsRegistry;
 import org.apache.samza.runtime.ProcessorIdGenerator;
-import org.apache.samza.serializers.model.ResourceModelMapper;
+import org.apache.samza.serializers.model.ExtendedSamzaObjectMapper;
 import org.apache.samza.serializers.model.SamzaObjectMapper;
 import org.apache.samza.storage.ChangelogStreamManager;
 import org.apache.samza.system.StreamMetadataCache;
@@ -417,7 +417,7 @@ public class LeaderJobCoordinator implements JobCoordinator{
                     // read the new Model
                     JobModel jobModel = getJobModel();
                     // start the container with the new model
-                    if (coordinatorListener != null && !(jobModel instanceof ResourceModel)) {
+                    if (coordinatorListener != null && !(jobModel instanceof ExtendedJobModel)) {
                         coordinatorListener.onNewJobModel(processorId, jobModel);
                     }
                 });
@@ -594,37 +594,40 @@ public class LeaderJobCoordinator implements JobCoordinator{
     }
 
     //DrG
-    public void setNewResourceModel(ResourceModel resourceModel){
+    public void setNewExtendedJobModel(ExtendedJobModel extendedJobModel){
         LOG.info("Acquiring lock...");
+        //TODO: resourceUpdateLock or updateLock
         resourceUpdateLock.lock();
         try {
-            LOG.info("Next ResourceModel to deploy: " + resourceModel);
-            tryToDeployNewResourceModel(resourceModel);
+            LOG.info("Next ExtendedJobModel to deploy: " + extendedJobModel);
+            tryToDeployNewExtendedJobModel(extendedJobModel);
+
+            //TODO: if some containers are offline.
+
         }finally {
             resourceUpdateLock.unlock();
         }
     }
 
-    private boolean tryToDeployNewResourceModel(ResourceModel resourceModel){
-        LOG.info("Try to deploy new ResourceModel...");
+    private boolean tryToDeployNewExtendedJobModel(ExtendedJobModel extendedJobModel){
         List<String> currentProcessorIds = zkUtils.getSortedActiveProcessorsIDs();
-        for(String containerId: resourceModel.getMemModels().keySet()){
+        for(String containerId: extendedJobModel.getMemModels().keySet()){
             if(!currentProcessorIds.contains(containerId)){
                 LOG.info("Container " + containerId + " is not online");
                 return false;
             }
         }
 
-        // Assign the next version of ResourceModel
+        // Assign the next version of ExtendedJobModel
         String currentRMVersion = zkUtils.getJobModelVersion();
         String nextRMVersion = zkUtils.getNextJobModelVersion(currentRMVersion);
-        LOG.info("pid=" + processorId + "Generated new ResourceModel with version: " + nextRMVersion + " and processors: " + currentProcessorIds);
+        LOG.info("pid=" + processorId + "Generated new ExtendedJobModel with version: " + nextRMVersion + " and processors: " + currentProcessorIds);
 
         // Publish the new job model
-        publishResourceModel(nextRMVersion, resourceModel);
+        publishExtendedJobModel(nextRMVersion, extendedJobModel);
 
         // Start the barrier for the job model update
-        List<String> expectedParticipantIds = new ArrayList<String>(resourceModel.getMemModels().keySet());
+        List<String> expectedParticipantIds = new ArrayList<String>(extendedJobModel.getMemModels().keySet());
         barrier.create(nextRMVersion, expectedParticipantIds);
 
         // Linsten to barrier participants change, to inform controller about the response.
@@ -639,21 +642,21 @@ public class LeaderJobCoordinator implements JobCoordinator{
         // Notify all processors about the new JobModel by updating JobModel Version number
         zkUtils.publishJobModelVersion(currentRMVersion, nextRMVersion);
 
-        LOG.info("pid=" + processorId + "Published new Resource Model. Version = " + nextRMVersion);
+        LOG.info("pid=" + processorId + "Published new extended Job Model. Version = " + nextRMVersion);
 
         debounceTimer.scheduleAfterDebounceTime(ON_ZK_CLEANUP, 0, () -> zkUtils.cleanupZK(NUM_VERSIONS_TO_LEAVE));
         return true;
     }
 
-    public void publishResourceModel(String resourceModelVersion, ResourceModel resourceModel) {
+    public void publishExtendedJobModel(String extendedJobModelVersion, ExtendedJobModel extendedJobModel) {
         try {
-            ObjectMapper mmapper = ResourceModelMapper.getObjectMapper();
-            String resourceModelStr = mmapper.writerWithDefaultPrettyPrinter().writeValueAsString(resourceModel);
-            LOG.info("resourceModelAsString=" + resourceModelStr);
-            zkUtils.getZkClient().createPersistent(zkUtils.getKeyBuilder().getJobModelPath(resourceModelVersion), resourceModelStr);
-            LOG.info("wrote resourceModel path =" + zkUtils.getKeyBuilder().getJobModelPath(resourceModelVersion));
+            ObjectMapper mmapper = ExtendedSamzaObjectMapper.getObjectMapper();
+            String extendedJobModelStr = mmapper.writerWithDefaultPrettyPrinter().writeValueAsString(extendedJobModel);
+            LOG.info("extendedJobModelAsString=" + extendedJobModelStr);
+            zkUtils.getZkClient().createPersistent(zkUtils.getKeyBuilder().getJobModelPath(extendedJobModelVersion), extendedJobModelStr);
+            LOG.info("wrote extendedJobModel path =" + zkUtils.getKeyBuilder().getJobModelPath(extendedJobModelVersion));
         } catch (Exception e) {
-            LOG.error("ResourceModel publish failed for version=" + resourceModelVersion, e);
+            LOG.error("ExtendedJobModel publish failed for version=" + extendedJobModelVersion, e);
             throw new SamzaException(e);
         }
     }
@@ -697,7 +700,7 @@ public class LeaderJobCoordinator implements JobCoordinator{
         Object data = zkUtils.getZkClient().readData(path);
         if(data == null)
             return null;
-        ObjectMapper mmapper = ResourceModelMapper.getObjectMapper();
+        ObjectMapper mmapper = ExtendedSamzaObjectMapper.getObjectMapper();
         ResponseModel response;
         try {
             response = mmapper.readValue((String) data, ResponseModel.class);
