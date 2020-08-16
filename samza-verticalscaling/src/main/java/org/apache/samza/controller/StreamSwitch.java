@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public abstract class StreamSwitch implements OperatorController{
     private static final Logger LOG = LoggerFactory.getLogger(StreamSwitch.class);
     protected OperatorControllerListener listener;
-//    protected StreamSwitchMetricsRetriever metricsRetriever;
+    protected StreamSwitchMetricsRetriever metricsRetriever;
     protected Map<String, List<String>> executorMapping;
     protected Map<String, Long> oeUnlockTime;
     protected long metricsRetreiveInterval;
@@ -28,16 +28,16 @@ public abstract class StreamSwitch implements OperatorController{
 
     public StreamSwitch(Config config){
         this.config = config;
-        metricsRetreiveInterval = config.getInt("streamswitch.system.metrics_interval", 100);
+        metricsRetreiveInterval = config.getInt("streamswitch.system.metrics_interval", 10000);
         maxNumberOfExecutors = config.getInt("streamswitch.system.max_executors", 64);
-//        metricsRetriever = createMetricsRetriever();
+        metricsRetriever = createMetricsRetriever();
         isMigrating = false;
         updateLock = new ReentrantLock();
     }
     @Override
     public void init(OperatorControllerListener listener, List<String> executors, List<String> partitions){
         this.listener = listener;
-//        metricsRetriever.init();
+        metricsRetriever.init();
         //Default executorMapping
         LOG.info("Initialize with executors: " + executors + "  partitions: " + partitions);
         executorMapping = new HashedMap();
@@ -119,8 +119,8 @@ public abstract class StreamSwitch implements OperatorController{
         LOG.info("Stream switch stopped");
     }
     abstract void work(long timeIndex);
-//    protected StreamSwitchMetricsRetriever createMetricsRetriever(){
-//        String retrieverFactoryClassName = config.getOrDefault("streamswitch.system.metrics_retriever.factory", "org.apache.samza.controller.streamswitch.JMXMetricsRetrieverFactory");
-//        return Util.getObj(retrieverFactoryClassName, StreamSwitchMetricsRetrieverFactory.class).getRetriever(config);
-//    }
+    protected StreamSwitchMetricsRetriever createMetricsRetriever(){
+        String retrieverFactoryClassName = config.getOrDefault("streamswitch.system.metrics_retriever.factory", "org.apache.samza.controller.JMXMetricsRetrieverFactory");
+        return Util.getObj(retrieverFactoryClassName, StreamSwitchMetricsRetrieverFactory.class).getRetriever(config);
+    }
 }

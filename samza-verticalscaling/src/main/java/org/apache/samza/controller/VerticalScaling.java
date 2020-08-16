@@ -26,26 +26,26 @@ public class VerticalScaling extends StreamSwitch{
     @Override
     public void init(OperatorControllerListener listener, List<String> executors, List<String> substreams){
         super.init(listener, executors, substreams);
-	this.listener = listener;
+        this.listener = listener;
     }
-
-    @Override
-    public void start(){
-        try {
-            Thread.sleep(50*1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        HashMap<String, Long> resourceMap = new HashMap<String, Long>();
-        resourceMap.put("000002", 1024L);
-        resourceMap.put("000003", 1024L);
-        LOG.info("resourceMap: " + resourceMap.toString());
-        listener.storeMemResize(resourceMap);
-    }
+//
+//    @Override
+//    public void start(){
+//        try {
+//            Thread.sleep(50*1000);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//        HashMap<String, Long> resourceMap = new HashMap<String, Long>();
+//        resourceMap.put("000002", 1024L);
+//        resourceMap.put("000003", 1024L);
+//        LOG.info("resourceMap: " + resourceMap.toString());
+//        listener.storeMemResize(resourceMap);
+//    }
 
     @Override
     void work(long timeIndex) {
-
+        Map<String, Object> metrics = metricsRetriever.retrieveMetrics();
     }
 
     @Override
@@ -59,7 +59,7 @@ public class VerticalScaling extends StreamSwitch{
     }
 
     @Override
-    public void onResourceResized(String processorId, String resourceModel){
+    public void onResourceResized(String processorId, String extendedJobModel){
         listener.containerResize(processorId, 2, 4096);
     }
 

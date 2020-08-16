@@ -45,7 +45,7 @@ public class RocksDbScalableOptionsHelper {
     private static final String ROCKSDB_KEEP_LOG_FILE_NUM = "rocksdb.keep.log.file.num";
 
     //DrG
-    private static Cache cache;
+//    private static Cache cache;
 
     public static Options options(Config storeConfig, int numTasksForContainer) {
         Options options = new Options();
@@ -80,13 +80,13 @@ public class RocksDbScalableOptionsHelper {
         }
         options.setCompressionType(compressionType);
 
-        long blockCacheSize = getBlockCacheSize(storeConfig, numTasksForContainer);
-        cache = new LRUCache(blockCacheSize); // DrG
-        int blockSize = storeConfig.getInt(ROCKSDB_BLOCK_SIZE_BYTES, 4096);
-        BlockBasedTableConfig tableOptions = new BlockBasedTableConfig();
-//    tableOptions.setBlockCacheSize(blockCacheSize).setBlockSize(blockSize);
-        tableOptions.setBlockCache(cache).setBlockSize(blockSize);//DrG
-        options.setTableFormatConfig(tableOptions);
+//        long blockCacheSize = getBlockCacheSize(storeConfig, numTasksForContainer);
+//        cache = new LRUCache(blockCacheSize); // DrG
+//        int blockSize = storeConfig.getInt(ROCKSDB_BLOCK_SIZE_BYTES, 4096);
+//        BlockBasedTableConfig tableOptions = new BlockBasedTableConfig();
+////    tableOptions.setBlockCacheSize(blockCacheSize).setBlockSize(blockSize);
+//        tableOptions.setBlockCache(cache).setBlockSize(blockSize);//DrG
+//        options.setTableFormatConfig(tableOptions);
 
         CompactionStyle compactionStyle = CompactionStyle.UNIVERSAL;
         String compactionStyleInConfig = storeConfig.get(ROCKSDB_COMPACTION_STYLE, "universal");
@@ -122,7 +122,11 @@ public class RocksDbScalableOptionsHelper {
     }
 
     //DrG
-    public static Cache getCache(){
-        return cache;
+    public static Options setLRUCache(Options options, Config storeConfig, LRUCache cache){
+        int blockSize = storeConfig.getInt(ROCKSDB_BLOCK_SIZE_BYTES, 4096);
+        BlockBasedTableConfig tableOptions = new BlockBasedTableConfig();
+        tableOptions.setBlockCache(cache).setBlockSize(blockSize);
+        options.setTableFormatConfig(tableOptions);
+        return options;
     }
 }

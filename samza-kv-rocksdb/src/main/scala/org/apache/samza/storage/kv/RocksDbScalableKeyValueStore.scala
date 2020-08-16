@@ -33,7 +33,7 @@ import org.rocksdb.{TtlDB, _}
 object RocksDbScalableKeyValueStore extends Logging {
 
   def openDB(dir: File, options: Options, storeConfig: Config, isLoggedStore: Boolean,
-             storeName: String, metrics: KeyValueStoreMetrics): RocksDB = {
+             storeName: String, metrics: ScalableKeyValueStoreMetrics, cache: LRUCache): RocksDB = {
     var ttl = 0L
     var useTTL = false
 
@@ -100,6 +100,17 @@ object RocksDbScalableKeyValueStore extends Logging {
           }
         ))
 
+      info("Register used-cache-size metric")
+      val dbs = new util.ArrayList[RocksDB](1)
+      dbs.add(rocksDb)
+      val caches = new util.HashSet[Cache](1)
+      caches.add(cache)
+      def getCacheUsage(): Long = {
+        val usage = MemoryUtil.getApproximateMemoryUsageByType(dbs, caches)
+        usage.get(MemoryUsageType.kCacheTotal)
+      }
+      metrics.setDirtyCacheSize(() => getCacheUsage())
+
       rocksDb
     } catch {
       case rocksDBException: RocksDBException =>
@@ -117,11 +128,13 @@ class RocksDbScalableKeyValueStore(
                             val storeName: String,
                             val writeOptions: WriteOptions = new WriteOptions(),
                             val flushOptions: FlushOptions = new FlushOptions(),
-                            val metrics: KeyValueStoreMetrics = new KeyValueStoreMetrics) extends ScalableKeyValueStore[Array[Byte], Array[Byte]] with Logging {
+                            val metrics: ScalableKeyValueStoreMetrics = new ScalableKeyValueStoreMetrics,
+                            val cache: LRUCache) extends ScalableKeyValueStore[Array[Byte], Array[Byte]] with Logging {
+
 
   // lazy val here is important because the store directories do not exist yet, it can only be opened
   // after the directories are created, which happens much later from now.
-  private lazy val db = RocksDbKeyValueStore.openDB(dir, options, storeConfig, isLoggedStore, storeName, metrics)
+  private lazy val db = RocksDbScalableKeyValueStore.openDB(dir, options, storeConfig, isLoggedStore, storeName, metrics, cache)
   private val lexicographic = new LexicographicComparator()
 
   /**
@@ -136,6 +149,7 @@ class RocksDbScalableKeyValueStore(
     metrics.gets.inc
     require(key != null, "Null key not allowed.")
     val found = db.get(key)
+
     if (found != null) {
       metrics.bytesRead.inc(found.length)
     }
@@ -146,6 +160,7 @@ class RocksDbScalableKeyValueStore(
     metrics.getAlls.inc
     require(keys != null, "Null keys not allowed.")
     val map = db.multiGet(keys)
+
     if (map != null) {
       var bytesRead = 0L
       val iterator = map.values().iterator
@@ -265,19 +280,15 @@ class RocksDbScalableKeyValueStore(
   }
 
   override def memoryResize(memoryMb: Long): Long = {
-    val cache = RocksDbScalableOptionsHelper.getCache
-    MemoryUtil.cacheResize(cache, memoryMb * 1024 * 1024)
+    val result = MemoryUtil.cacheResize(cache, memoryMb * 1024 * 1024)
+    metrics.totalCacheBytes.set(result)
+    result
   }
 
-  def getCacheUsage(): Long = {
-    val cache = RocksDbScalableOptionsHelper.getCache
-    val dbs = new util.ArrayList[RocksDB](1)
-    dbs.add(db)
-    val caches = new util.HashSet[Cache](1)
-    caches.add(cache)
-    val usage = MemoryUtil.getApproximateMemoryUsageByType(dbs, caches)
-    usage.get(MemoryUsageType.kCacheTotal)
-  }
+//  def getCacheUsage(): Long = {
+//    val usage = MemoryUtil.getApproximateMemoryUsageByType(dbs, caches)
+//    usage.get(MemoryUsageType.kCacheTotal)
+//  }
 
   class RocksDbIterator(iter: RocksIterator) extends KeyValueIterator[Array[Byte], Array[Byte]] {
     private var open = true

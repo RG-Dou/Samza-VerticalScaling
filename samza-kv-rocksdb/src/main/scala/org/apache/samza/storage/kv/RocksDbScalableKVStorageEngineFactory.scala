@@ -26,6 +26,7 @@ import org.apache.samza.context.{ContainerContext, JobContext}
 import org.apache.samza.metrics.MetricsRegistry
 import org.apache.samza.system.SystemStreamPartition
 import org.rocksdb.{FlushOptions, WriteOptions}
+import org.rocksdb.LRUCache
 
 class RocksDbScalableKVStorageEngineFactory [K, V] extends BaseScalableKVStorageEngineFactory[K, V] {
   /**
@@ -45,12 +46,18 @@ class RocksDbScalableKVStorageEngineFactory [K, V] extends BaseScalableKVStorage
                           containerContext: ContainerContext): ScalableKeyValueStore[Array[Byte], Array[Byte]] = {
     val storageConfig = jobContext.getConfig.subset("stores." + storeName + ".", true)
     val isLoggedStore = jobContext.getConfig.getChangelogStream(storeName).isDefined
-    val rocksDbMetrics = new KeyValueStoreMetrics(storeName, registry)
+    val rocksDbMetrics = new ScalableKeyValueStoreMetrics(storeName, registry)
     val numTasksForContainer = containerContext.getContainerModel.getTasks.keySet().size()
     rocksDbMetrics.newGauge("rocksdb.block-cache-size",
       () => RocksDbScalableOptionsHelper.getBlockCacheSize(storageConfig, numTasksForContainer))
 
-    val rocksDbOptions = RocksDbScalableOptionsHelper.options(storageConfig, numTasksForContainer)
+    var rocksDbOptions = RocksDbScalableOptionsHelper.options(storageConfig, numTasksForContainer)
+
+    val blockCacheSize = RocksDbOptionsHelper.getBlockCacheSize(storageConfig, numTasksForContainer)
+    val cache = new LRUCache(blockCacheSize)
+    rocksDbMetrics.totalCacheBytes.set(blockCacheSize)
+    rocksDbOptions = RocksDbScalableOptionsHelper.setLRUCache(rocksDbOptions, storageConfig, cache)
+
     val rocksDbWriteOptions = new WriteOptions().setDisableWAL(true)
     val rocksDbFlushOptions = new FlushOptions().setWaitForFlush(true)
     val rocksDb = new RocksDbScalableKeyValueStore(
@@ -61,7 +68,8 @@ class RocksDbScalableKVStorageEngineFactory [K, V] extends BaseScalableKVStorage
       storeName,
       rocksDbWriteOptions,
       rocksDbFlushOptions,
-      rocksDbMetrics)
+      rocksDbMetrics,
+      cache)
     rocksDb
   }
 }
