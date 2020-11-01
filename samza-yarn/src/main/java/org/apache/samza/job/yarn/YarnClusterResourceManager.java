@@ -75,7 +75,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  */
 
-public class YarnClusterResourceManager extends ClusterResourceManager implements AMRMClientAsync.CallbackHandler, NMClientAsync.CallbackHandler {
+public class YarnClusterResourceManager extends ClusterResourceManager implements AMRMClientAsync.AbstractCallbackHandler, NMClientAsync.CallbackHandler {
 
   private static final int PREFERRED_HOST_PRIORITY = 0;
   private static final int ANY_HOST_PRIORITY = 1;
@@ -549,6 +549,23 @@ public class YarnClusterResourceManager extends ClusterResourceManager implement
   @Override
   public void onStopContainerError(ContainerId containerId, Throwable t) {
     log.info("Got an error when stopping container from the NodeManager. ContainerId: {}. Error: {}", containerId, t);
+  }
+  //DrG
+  @Override
+  public void onContainersResourceChanged(List<Container> containers) {
+    log.info("Got a notification from the Resource for a container increased. Container: {}", containers.toString());
+  }
+
+  //DrG
+  @Override
+  public void onIncreaseContainerResourceError(ContainerId containerId, Throwable t){
+    log.info("Got an error when increase container from the NodeManger. ContainerId: {}. Error: {}", containerId, t);
+  }
+
+  //DrG
+  @Override
+  public void onContainerResourceIncreased(ContainerId containerId, Resource resource){
+    log.info("Got a notification from the NodemManager for a container increased. ContainerId: {} Resource: {}", containerId, resource.toString());
   }
 
   /**

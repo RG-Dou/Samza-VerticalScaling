@@ -380,4 +380,9 @@ class TaskInstance(
 
     startingOffset
   }
+
+  //DrG
+  def storeMemoryResize(memoryMb: Long): Long = {
+    storageManager.memoryResize(memoryMb)
+  }
 }

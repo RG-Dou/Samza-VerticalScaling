@@ -680,7 +680,8 @@ object SamzaContainer extends Logging {
       config,
       clock)
 
-    val memoryStatisticsMonitor : SystemStatisticsMonitor = new StatisticsMonitorImpl()
+//    val memoryStatisticsMonitor : SystemStatisticsMonitor = new StatisticsMonitorImpl() drg
+    val memoryStatisticsMonitor : SystemStatisticsMonitor = new StatisticsMonitorImpl(1000)
     memoryStatisticsMonitor.registerListener(new SystemStatisticsMonitor.Listener {
       override def onUpdate(sample: SystemMemoryStatistics): Unit = {
         val physicalMemoryBytes : Long = sample.getPhysicalMemoryBytes
@@ -1201,5 +1202,13 @@ class SamzaContainer(
       info("Shutting down host statistics monitor.")
       hostStatisticsMonitor.stop()
     }
+  }
+
+  //DrG
+  def taskStoreMemResize(memoryMb: Long): Long = {
+    info("Shutting down task instance table manager.")
+    var totalSize = 0L
+    taskInstances.values.foreach(taskInstance => totalSize += taskInstance.storeMemoryResize(memoryMb))
+    totalSize
   }
 }

@@ -81,6 +81,14 @@ public class StatisticsMonitorImpl implements SystemStatisticsMonitor {
     this(60000, new PosixCommandBasedStatisticsGetter());
   }
 
+  /** drg
+   * Creates a new {@link StatisticsMonitorImpl} that reports statistics every 60 seconds
+   *
+   */
+  public StatisticsMonitorImpl(long pollingIntervalMillis) {
+    this(pollingIntervalMillis, new PosixCommandBasedStatisticsGetter());
+  }
+
   /**
    * Creates a new {@link StatisticsMonitorImpl} that reports statistics periodically
 

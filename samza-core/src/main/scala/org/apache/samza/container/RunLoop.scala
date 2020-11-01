@@ -19,12 +19,14 @@
 
 package org.apache.samza.container
 
+
 import org.apache.samza.task.CoordinatorRequests
 import org.apache.samza.system.{IncomingMessageEnvelope, SystemConsumers, SystemStreamPartition}
 import org.apache.samza.task.ReadableCoordinator
 import org.apache.samza.util.{Logging, Throttleable, ThrottlingExecutor, TimerUtil}
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 /**
  * The run loop uses a single-threaded execution model: activities for
@@ -36,19 +38,27 @@ import scala.collection.JavaConverters._
  * be done when.
  */
 class RunLoop (
-  val taskInstances: Map[TaskName, TaskInstance],
-  val consumerMultiplexer: SystemConsumers,
-  val metrics: SamzaContainerMetrics,
-  val maxThrottlingDelayMs: Long,
-  val windowMs: Long = -1,
-  val commitMs: Long = 60000,
-  val clock: () => Long = { System.nanoTime }) extends Runnable with Throttleable with TimerUtil with Logging {
+                val taskInstances: Map[TaskName, TaskInstance],
+                val consumerMultiplexer: SystemConsumers,
+                val metrics: SamzaContainerMetrics,
+                val maxThrottlingDelayMs: Long,
+                val windowMs: Long = -1,
+                val commitMs: Long = 60000,
+                val clock: () => Long = { System.nanoTime }) extends Runnable with Throttleable with TimerUtil with Logging {
 
   private val metricsMsOffset = 1000000L
   private val executor = new ThrottlingExecutor(maxThrottlingDelayMs)
   private var lastWindowNs = clock()
   private var lastCommitNs = clock()
   private var activeNs = 0L
+  private var tuples = 0
+  private var latency = 0L
+  private var startTime = 0L
+  // Ground truth
+  private var lastGTTime = 0L
+  private var gtLatencyMap = new mutable.HashMap[Int, Long]()
+  private var gtTuplesMap = new mutable.HashMap[Int, Long]()
+
   @volatile private var shutdownNow = false
   private val coordinatorRequests: CoordinatorRequests = new CoordinatorRequests(taskInstances.keySet.asJava)
 
@@ -73,16 +83,27 @@ class RunLoop (
    * unhandled exception is thrown.
    */
   def run {
+    var start = clock()
+    var processTime = 0L
+    var timeInterval = 0L
+    var chooseTime = 0L;
+    if (lastGTTime == 0L){
+      lastGTTime = (System.currentTimeMillis() / 1000L) * 1000L
+    }
     while (!shutdownNow) {
-      val loopStartTime = clock()
+      var prevNs = clock()
 
       trace("Attempting to choose a message to process.")
 
       // Exclude choose time from activeNs. Although it includes deserialization time,
       // it most closely captures idle time.
+      val chooseStart = clock()
       val envelope = updateTimer(metrics.chooseNs) {
         consumerMultiplexer.choose()
       }
+      val chooseNs = clock() - chooseStart
+
+      val processStart = clock()
 
       executor.execute(new Runnable() {
         override def run(): Unit = process(envelope)
@@ -90,11 +111,59 @@ class RunLoop (
 
       window
       commit
-      val totalNs = clock() - loopStartTime
+
+      val currentNs = clock()
+      val totalNs = currentNs - prevNs
+      // need to add deserialization ns, this is non trivial when processing time is short
+      // we also need to exempt those time spent on commit and window when there is no tuple input.
+      var usefulTime = currentNs - processStart
+      if (envelope != null) {
+        usefulTime += chooseNs
+      } else {
+        chooseTime += chooseNs
+        usefulTime = 0
+      }
 
       if (totalNs != 0) {
         metrics.utilization.set(activeNs.toFloat / totalNs)
       }
+
+      processTime += usefulTime
+      timeInterval += totalNs
+
+      if (currentNs - start >= 1000000000) { // totalNs is not 0 if timer metrics are enabled
+        val utilization = processTime.toFloat / timeInterval
+        val idleTime = chooseTime.toFloat / timeInterval
+        val serviceRate = tuples.toFloat*1000 / (processTime)
+        val avgLatency = if (tuples == 0) 0
+        else latency / tuples.toFloat
+        //          log.debug("utilization: " + utilization + " tuples: " + tuples + " service rate: " + serviceRate + " average latency: " + avgLatency);
+        println("utilization: " + utilization + " tuples: " + tuples + " service rate: " + serviceRate + " average latency: " + avgLatency
+          + " chooseNs: " + idleTime)
+        metrics.avgUtilization.set(utilization)
+        metrics.serviceRate.set(serviceRate)
+        metrics.latency.set(avgLatency)
+        start = currentNs
+        processTime = 0L
+        timeInterval = 0L
+        tuples = 0
+        latency = 0
+        chooseTime = 0
+      }
+
+      //Average Ground Truth in 1 second
+      val curTime = System.currentTimeMillis()
+      if (curTime - lastGTTime >= 1000L) {
+        gtLatencyMap.foreach{
+          case (key, value) => {
+            println("GT: " + lastGTTime + " partition: " + key +  " tuples: " + gtTuplesMap(key) + " Latency: " + gtLatencyMap(key))
+          }
+        }
+        gtLatencyMap.clear()
+        gtTuplesMap.clear()
+        lastGTTime = (curTime / 1000L) * 1000L
+      }
+
       activeNs = 0L
     }
   }
@@ -116,6 +185,12 @@ class RunLoop (
 
     activeNs += updateTimerAndGetDuration(metrics.processNs) ((currentTimeNs: Long) => {
       if (envelope != null) {
+        tuples += 1
+        if (startTime == 0) {
+          startTime = System.currentTimeMillis()
+          println("start time: " + startTime)
+        }
+
         val ssp = envelope.getSystemStreamPartition
 
         trace("Processing incoming message envelope for SSP %s." format ssp)
@@ -130,6 +205,18 @@ class RunLoop (
             coordinatorRequests.update(coordinator)
           }
         }
+        // latency should be the time when the tuple has been processed - envelope timestamp.
+        val tLatency = System.currentTimeMillis() - envelope.getTimestamp
+        latency += System.currentTimeMillis() - envelope.getTimestamp
+        val partitionId = ssp.getPartition.getPartitionId
+        if (gtTuplesMap.contains(partitionId)){
+          gtTuplesMap.put(partitionId, gtTuplesMap(partitionId) + 1)
+          gtLatencyMap.put(partitionId, gtLatencyMap(partitionId) + tLatency)
+        }else{
+          gtTuplesMap.put(partitionId, 1)
+          gtLatencyMap.put(partitionId, tLatency)
+        }
+        //println("stock_id: " + ssp.getPartition.getPartitionId + " arrival_ts: " + envelope.getTimestamp + " completion_ts: " + System.currentTimeMillis())
       } else {
         trace("No incoming message envelope was available.")
         metrics.nullEnvelopes.inc

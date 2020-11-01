@@ -143,7 +143,8 @@ public class WindowOperatorSpec<M, WK, WV> extends OperatorSpec<M, WindowPane<WK
   @Override
   public Collection<StoreDescriptor> getStoreDescriptors() {
     String storeName = getOpId();
-    String storeFactory = "org.apache.samza.storage.kv.RocksDbKeyValueStorageEngineFactory";
+//    String storeFactory = "org.apache.samza.storage.kv.RocksDbKeyValueStorageEngineFactory";
+    String storeFactory = "org.apache.samza.storage.kv.RocksDbScalableKVStorageEngineFactory";
 
     Serde storeKeySerde = new TimeSeriesKeySerde<>(window.getKeySerde());
     Serde storeValSerde = window.getFoldLeftFunction() == null ? window.getMsgSerde() : window.getWindowValSerde();
