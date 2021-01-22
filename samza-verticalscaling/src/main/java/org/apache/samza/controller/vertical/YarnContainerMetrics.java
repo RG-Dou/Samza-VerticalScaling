@@ -9,6 +9,9 @@ import org.apache.samza.util.hadoop.HttpFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,7 +22,12 @@ public class YarnContainerMetrics {
 
     private ApplicationId appId;
     private ApplicationAttemptId attemptId;
+    private Map<String, String> contaienrIdMap = new HashMap<String, String>();
 
+    private final String cgroupMemDir = "/sys/fs/cgroup/memory/yarn/";
+    private final String memStat = "memory.stat";
+    private final String cgroupCPUDir = "/sys/fs/cgroup/cpu,cpuacct/yarn/";
+    private final String cpuStat = "cpuacct.stat";
 
     public YarnContainerMetrics(String jobName){
         YarnConfiguration hadoopConfig = new YarnConfiguration();
@@ -78,7 +86,9 @@ public class YarnContainerMetrics {
                     String containerID = containerReport.getContainerId().toString();
                     Resource resource = containerReport.getAllocatedResource();
                     //TODO: not substring.
-                    info.put(containerID.substring(containerID.length() - 6, containerID.length()), resource);
+                    String containerIDShort = containerID.substring(containerID.length() - 6, containerID.length());
+                    info.put(containerIDShort, resource);
+                    contaienrIdMap.put(containerIDShort, containerID);
                 }
             }
         } catch (Exception e) {
@@ -101,6 +111,73 @@ public class YarnContainerMetrics {
             System.exit(1);
         }
         return resource;
+    }
+
+    public String getFullContainerId(String containerId){
+        if (contaienrIdMap.containsKey(containerId)){
+            return contaienrIdMap.get(containerId);
+        } else{
+            return null;
+        }
+    }
+
+
+    public HashMap<String, Long> getMemMetrics(String key){
+        HashMap<String, Long> memMetrics = new HashMap<>();
+        for (Map.Entry<String, String> entry : contaienrIdMap.entrySet()){
+            if(entry.getKey() == "000001")
+                continue;
+            String fileName = cgroupMemDir + entry.getValue() + "/" + memStat;
+            HashMap<String, Long> stat = getStat(fileName);
+            if(stat == null)
+                continue;
+            memMetrics.put(entry.getKey(), stat.get(key));
+        }
+        return memMetrics;
+    }
+
+
+    private HashMap<String, Long> getStat(String fileName){
+        HashMap<String, Long> memStat = new HashMap<>();
+        String content = getCGroupParam(fileName);
+        if (content == null)
+            return  null;
+        String[] arrays = content.split("\n");
+        for(String pair : arrays){
+            String[] pairs = pair.split(" ");
+            String key = pairs[0];
+            Long value = Long.parseLong(pairs[1]);
+            memStat.put(key, value);
+        }
+        return memStat;
+    }
+
+    public HashMap<String, HashMap<String, Long>> getCpuMetrics(){
+        HashMap<String, HashMap<String, Long>> cpuMetrics = new HashMap<>();
+        for (Map.Entry<String, String> entry : contaienrIdMap.entrySet()){
+            if(entry.getKey() == "000001")
+                continue;
+            String fileName = cgroupCPUDir + entry.getValue() + "/" + cpuStat;
+            HashMap<String, Long> stat = getStat(fileName);
+            if(stat == null)
+                continue;
+            cpuMetrics.put(entry.getKey(), stat);
+        }
+        return cpuMetrics;
+
+    }
+
+
+    public String getCGroupParam(String cGroupParamPath){
+        try {
+            byte[] contents = Files.readAllBytes(Paths.get(cGroupParamPath));
+            String s = new String(contents, "UTF-8");
+//            LOG.info("cgroup tell us: " + s);
+            return new String(contents, "UTF-8").trim();
+        } catch (IOException e) {
+            LOG.info("Unable to read from " + cGroupParamPath);
+            return null;
+        }
     }
 
 }

@@ -1,6 +1,7 @@
 package org.apache.samza.controller;
 
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.hadoop.util.hash.Hash;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -10,6 +11,7 @@ import org.apache.samza.config.Config;
 import org.apache.samza.controller.vertical.YarnContainerMetrics;
 import org.apache.samza.job.yarn.ClientHelper;
 import org.apache.samza.util.hadoop.HttpFileSystem;
+import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Int;
@@ -22,6 +24,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.text.NumberFormat;
 import java.util.*;
+import java.util.concurrent.*;
 
 
 //Under development
@@ -231,6 +234,8 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         }
     }
     private static class JMXclient{
+        //TODO: need close
+        final ExecutorService exec = Executors.newFixedThreadPool(1);
         JMXclient(){
         }
         private boolean isWaterMark(ObjectName name, String topic){
@@ -442,6 +447,29 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
             }
             return metrics;
         }
+
+        private Map<String, Object> retrieveMetricsCall(String containerId, List<String> topics, String url){
+
+            Callable<Map<String, Object>> call = new Callable<Map<String,Object>>(){
+                public Map<String, Object> call() throws Exception {
+                    return retrieveMetrics(containerId, topics, url);
+                }
+            };
+            Map<String, Object> obj = null;
+            try {
+                Future<Map<String, Object>> future = exec.submit(call);
+                obj = future.get(1000 * 1, TimeUnit.MILLISECONDS); //任务处理超时时间设为 1 秒
+            } catch (TimeoutException ex){
+                LOG.info("time out of retrieving metrics for container: " + containerId);
+            } catch (Exception e) {
+                LOG.error("Retrieving metrics error: " + e);
+                e.printStackTrace();
+                exec.shutdown();
+            }
+//            exec.shutdown();
+            return obj;
+        }
+
     }
 
 
@@ -487,6 +515,8 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         executorArrived = new HashMap<>();
         executorProcessed = new HashMap<>();
         executorResources = new HashMap<>();
+        executorPGMajFault = new HashMap<>();
+        executorCpuStat = new HashMap<>();
         executorMemoryUsed = new HashMap<>();
         executorHeapCommitted = new HashMap<>();
         executorHeapUsed = new HashMap<>();
@@ -507,8 +537,9 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         4) Even JMX metrics are not correct after migration?
      */
 
-    HashMap<String, Long> partitionProcessed, partitionArrived, executorProcessed, executorArrived;
+    HashMap<String, Long> partitionProcessed, partitionArrived, executorProcessed, executorArrived, executorPGMajFault;
     HashMap<String, Resource> executorResources;
+    HashMap<String, HashMap<String, Long>> executorCpuStat;
     HashMap<String, Double> executorUtilization, executorServiceRate, executorMemoryUsed,
             executorHeapCommitted, executorHeapUsed, executorNonHeapCommitted, executorNonHeapUsed, executorCpuUsage;
     HashMap<String, Boolean> executorRunning;
@@ -535,23 +566,23 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         // In metrics, topic will be changed to lowercase
 
         //Debugging
-        LOG.info("Start retrieving AppId");
+//        LOG.info("Start retrieving AppId");
 
         String appId = yarnLogRetriever.retrieveAppId(YarnHomePage,jobName + "_" + jobId);
 
         //Debugging
-        LOG.info("Start retrieving Containers' address");
+//        LOG.info("Start retrieving Containers' address");
 
         List<String> containers = yarnLogRetriever.retrieveContainersAddress(YarnHomePage, appId);
 
         //Debugging
-        LOG.info("Start retrieving Containers' JMX url");
+//        LOG.info("Start retrieving Containers' JMX url");
         containerRMI.clear();
         yarnLogRetriever.retrieveContainerJMX(containerRMI, containers);
         containers.clear();
 
         //Debugging
-        LOG.info("Start retrieving Checkpoint offsets url");
+//        LOG.info("Start retrieving Checkpoint offsets url");
 
         //Map<String, HashMap<String, Long>> checkpointOffset = yarnLogRetriever.retrieveCheckpointOffsets(containers, topics);
         metrics.clear();
@@ -565,6 +596,8 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         executorServiceRate.clear();
         executorMemoryUsed.clear();
         executorResources.clear();
+        executorPGMajFault.clear();
+        executorCpuStat.clear();
         executorHeapUsed.clear();
         executorHeapCommitted.clear();
         executorNonHeapUsed.clear();
@@ -581,6 +614,8 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         metrics.put("ServiceRate", executorServiceRate);
         metrics.put("MemUsed", executorMemoryUsed);
         metrics.put("Resources", executorResources);
+        metrics.put("PGMajFault", executorPGMajFault);
+        metrics.put("CpuStat", executorCpuStat);
         metrics.put("HeapUsed", executorHeapUsed);
         metrics.put("HeapCommitted", executorHeapCommitted);
         metrics.put("NonHeapUsed", executorNonHeapUsed);
@@ -592,7 +627,11 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         HashMap<String, Double> processCpuUsage = new HashMap<>(), systemCpuUsage = new HashMap<>();
         for(Map.Entry<String, String> entry: containerRMI.entrySet()){
             String containerId = entry.getKey();
+            LOG.info("Get Metrics from container: " + containerId);
+//            Map<String, Object> ret = jmxClient.retrieveMetricsCall(containerId, topics, entry.getValue());
             Map<String, Object> ret = jmxClient.retrieveMetrics(containerId, topics, entry.getValue());
+            if (ret == null)
+                continue;
 
             if(ret.containsKey("PartitionCheckpoint")){
                 HashMap<String, HashMap<String, String>> checkpoint = (HashMap<String, HashMap<String, String>>)ret.get("PartitionCheckpoint");
@@ -696,8 +735,8 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
             }*/
             if(ret.containsKey("ProcessCpuUsage")){
                 executorUtilization.put(containerId, ((Double)ret.get("ProcessCpuUsage")) / 3.125);
-                //TODO: don't / 3.125
-                executorCpuUsage.put(containerId, (Double)ret.get("ProcessCpuUsage")  * 12 / 100);
+
+                executorCpuUsage.put(containerId, (Double)ret.get("ProcessCpuUsage"));
             }
             if(ret.containsKey("ServiceRate")){
                 double t = (Double)ret.get("ServiceRate");
@@ -740,11 +779,23 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
 
             }
         }
+        YarnContainerMetrics yarnMetics = new YarnContainerMetrics(this.jobName);
 
-        Map<String, Resource> ret = new YarnContainerMetrics(this.jobName).getAllMetrics();
+        Map<String, Resource> ret = yarnMetics.getAllMetrics();
         for(Map.Entry<String, Resource> ent : ret.entrySet()) {
             executorResources.put(ent.getKey(), ent.getValue());
         }
+
+        HashMap<String, Long> memStat = yarnMetics.getMemMetrics("pgmajfault");
+        for(Map.Entry<String, Long> ent : memStat.entrySet()){
+            executorPGMajFault.put(ent.getKey(), ent.getValue());
+        }
+
+        HashMap<String, HashMap<String, Long>> cpuStat = yarnMetics.getCpuMetrics();
+        for(Map.Entry<String, HashMap<String, Long>> ent : cpuStat.entrySet()){
+            executorCpuStat.put(ent.getKey(), ent.getValue());
+        }
+
         LOG.info("Retrieved Metrics: " + metrics);
 //        System.out.println("Process CPU Usage: " + processCpuUsage);
 
