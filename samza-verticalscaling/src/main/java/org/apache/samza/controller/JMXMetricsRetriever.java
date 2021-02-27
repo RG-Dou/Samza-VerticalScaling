@@ -1,20 +1,13 @@
 package org.apache.samza.controller;
 
 import org.apache.commons.lang.math.NumberUtils;
-import org.apache.hadoop.util.hash.Hash;
-import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.kafka.common.protocol.types.Field;
-import org.apache.samza.SamzaException;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.samza.config.Config;
 import org.apache.samza.controller.vertical.YarnContainerMetrics;
-import org.apache.samza.job.yarn.ClientHelper;
-import org.apache.samza.util.hadoop.HttpFileSystem;
-import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.Int;
 
 import javax.management.*;
 import javax.management.remote.JMXConnector;
@@ -22,7 +15,6 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import java.net.URL;
 import java.net.URLConnection;
-import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -35,7 +27,7 @@ import java.util.concurrent.*;
 */
 
 public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
-    private static final Logger LOG = LoggerFactory.getLogger(org.apache.samza.controller.JMXMetricsRetriever.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JMXMetricsRetriever.class);
     static class YarnLogRetriever{
         //String YARNHomePage;
         //String appId;
@@ -89,7 +81,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
             }
             return containerAddress;
         }
-        protected void retrieveContainerJMX(Map<String, String> containerJMX, List<String> containerAddress){
+        protected void retrieveContainerJMX(Map<String, String> containerJMX, List<String> containerAddress, Map<String, String> containerIdMap){
             for(String address: containerAddress){
                 try {
                     String url = address;
@@ -113,6 +105,11 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
                                         //LOG.info("container's JMX: " + ret);
                                         String host = url.split("[\\:]")[1].substring(2);
                                         String jmxRMI = ret.get(1).replaceAll("localhost", host);
+                                        String[] addressStrList = address.split("/");
+                                        for(String addressStr : addressStrList){
+                                            if (addressStr.contains("container_"))
+                                                containerIdMap.put(ret.get(0), addressStr);
+                                        }
                                         containerJMX.put(ret.get(0), jmxRMI);
                                         ret.clear();
                                     }
@@ -128,6 +125,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         }
         protected List<String> retrieveContainerJMX(String address){
             String containerId = null, JMXaddress = null;
+//            System.out.println("address: " + address);
             try{
                 //LOG.info("Try to retrieve container's JMXRMI from url: " + url);
                 URLConnection connection = new URL(address).openConnection();
@@ -578,7 +576,10 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         //Debugging
 //        LOG.info("Start retrieving Containers' JMX url");
         containerRMI.clear();
-        yarnLogRetriever.retrieveContainerJMX(containerRMI, containers);
+
+        Map<String, String> containerIDMap = new HashMap<>();
+        yarnLogRetriever.retrieveContainerJMX(containerRMI, containers, containerIDMap);
+//        System.out.println("container Id Map: " + containerIDMap);
         containers.clear();
 
         //Debugging
@@ -780,6 +781,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
             }
         }
         YarnContainerMetrics yarnMetics = new YarnContainerMetrics(this.jobName);
+        yarnMetics.setContaienrIdMap(containerIDMap);
 
         Map<String, Resource> ret = yarnMetics.getAllMetrics();
         for(Map.Entry<String, Resource> ent : ret.entrySet()) {

@@ -22,7 +22,8 @@ public class YarnContainerMetrics {
 
     private ApplicationId appId;
     private ApplicationAttemptId attemptId;
-    private Map<String, String> contaienrIdMap = new HashMap<String, String>();
+
+    private static Map<String, String> contaienrIdMap = new HashMap<String, String>();
 
     private final String cgroupMemDir = "/sys/fs/cgroup/memory/yarn/";
     private final String memStat = "memory.stat";
@@ -86,9 +87,15 @@ public class YarnContainerMetrics {
                     String containerID = containerReport.getContainerId().toString();
                     Resource resource = containerReport.getAllocatedResource();
                     //TODO: not substring.
-                    String containerIDShort = containerID.substring(containerID.length() - 6, containerID.length());
+                    String containerIDShort = null;
+                    for(Map.Entry<String, String> entry: contaienrIdMap.entrySet()){
+                        if (entry.getValue().equals(containerID))
+                            containerIDShort = entry.getKey();
+                    }
+                    if(containerIDShort == null) {
+                        continue;
+                    }
                     info.put(containerIDShort, resource);
-                    contaienrIdMap.put(containerIDShort, containerID);
                 }
             }
         } catch (Exception e) {
@@ -178,6 +185,10 @@ public class YarnContainerMetrics {
             LOG.info("Unable to read from " + cGroupParamPath);
             return null;
         }
+    }
+
+    public void setContaienrIdMap(Map<String, String> contaienrIdMap) {
+        this.contaienrIdMap = contaienrIdMap;
     }
 
 }

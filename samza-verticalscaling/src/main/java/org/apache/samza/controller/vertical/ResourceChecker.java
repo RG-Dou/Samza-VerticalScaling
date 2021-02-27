@@ -60,6 +60,11 @@ public class ResourceChecker implements Runnable {
                     monitor(expandsTargets);
                 }
             }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -75,7 +80,10 @@ public class ResourceChecker implements Runnable {
         for (Map.Entry<String, Resource> entry : containers.entrySet()) {
             String containerId = entry.getKey();
             Resource target = entry.getValue();
+            if (!allMetrics.containsKey(containerId))
+                continue;
             Resource currentResource = allMetrics.get(containerId);
+
             if (target.equals(currentResource)) {
                 if(runningStatus == status.SHRINKING) {
                     checkAndAdjust(containerId, currentResource.getMemory());

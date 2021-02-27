@@ -1,10 +1,12 @@
 package org.apache.samza.controller.vertical;
 
-
 import org.apache.samza.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.math3.stat.regression.*;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +17,11 @@ public class Model {
     private final State state;
     Map<String, Double> substreamArrivalRate, executorArrivalRate, executorServiceRate, executorInstantaneousDelay, executorArrivalRateInDelay; //Longterm delay could be calculated from arrival rate and service rate
     Map<String, Long> executorCompleted, executorArrived; //For debugging instant delay
-    Map<String, Long> processingRate, avgProcessingRate, avgArrivalRate;
+    Map<String, Double> processingRate, avgProcessingRate, avgArrivalRate;
+
+    public Map<String, Double> validRate;
+    private SimpleRegression regression = new SimpleRegression();
+    public double maxMPFPerCpu = 4000.0;
 
     private final double initialServiceRate, decayFactor, conservativeFactor; // Initial prediction by user or system on service rate.
     private final long metricsRetreiveInterval, windowReq;
@@ -30,10 +36,13 @@ public class Model {
         processingRate = new HashMap<>();
         avgProcessingRate = new HashMap<>();
         avgArrivalRate = new HashMap<>();
+        validRate = new HashMap<>();
+
         this.state = state;
         initialServiceRate = config.getDouble("streamswitch.system.initialservicerate", 0.2);
         decayFactor = config.getDouble("streamswitch.system.decayfactor", 0.875);
         conservativeFactor = config.getDouble("streamswitch.system.conservative", 1.0);
+
         this.metricsRetreiveInterval = metricsRetreiveInterval;
         this.windowReq = windowReq;
     }
@@ -109,13 +118,13 @@ public class Model {
             }
             if(firstIndex != 0l && endIndex != 0l){
                 long deltaTuples = state.getSubstreamArrived(substream, endIndex) - state.getSubstreamArrived(substream, firstIndex);
-                totalArrivalRate += deltaTuples/(endIndex - firstIndex);
+                totalArrivalRate += deltaTuples/(endIndex - firstIndex + 1);
             }
         }
         return totalArrivalRate;
     }
 
-    public void updateProcessingRate(long timeIndex){
+    public void updateInformation(long timeIndex){
         executorCompleted.clear();
         executorArrived.clear();
         processingRate.clear();
@@ -127,6 +136,10 @@ public class Model {
             long totalCompleted = 0;
             long totalArrived = 0;
             long nowCompleted = 0;
+            long firstPGFault = 0L;
+            long firstPGIndex = 0L;
+            double totalCPUUsage = 0.0;
+            int cpuUsageCount = 0;
             if (n0 < 1) {
                 n0 = 1;
                 LOG.warn("Calculate instant delay index smaller than window size!");
@@ -149,14 +162,38 @@ public class Model {
                         if (i == timeIndex)
                             nowCompleted += state.getSubstreamCompleted(substream, i) - state.getSubstreamCompleted(substream, i - 1);
                     }
+                    if(state.getCpuUsage(i, executorId) != 0.0) {
+                        totalCPUUsage += state.getCpuUsage(i, executorId);
+                        cpuUsageCount+=1;
+                    }
+                    if(firstPGFault == 0 && state.getPGFault(i, executorId) != 0) {
+                        firstPGFault = state.getPGFault(i, executorId);
+                        firstPGIndex = i;
+                    }
                 }
             }
+            long pgFaultAvg;
+            if(firstPGIndex == timeIndex){
+                pgFaultAvg = 0;
+            } else {
+                pgFaultAvg = (state.getPGFault(timeIndex, executorId) - firstPGFault) / (timeIndex - firstPGIndex);
+            }
+            double cpuUsageAvg = totalCPUUsage/cpuUsageCount;
+            double pgFaultPerCpu = pgFaultAvg/cpuUsageAvg;
+            double prPerCpu = totalCompleted / (timeIndex - n0 + 1) / cpuUsageAvg;
 
             executorCompleted.put(executorId, totalCompleted);
             executorArrived.put(executorId, totalArrived);
-            processingRate.put(executorId, nowCompleted / (metricsRetreiveInterval / 1000));
-            avgProcessingRate.put(executorId, totalCompleted / (timeIndex - n0 + 1) / (metricsRetreiveInterval / 1000));
-            avgArrivalRate.put(executorId, totalArrived / (timeIndex - n0 + 1) / (metricsRetreiveInterval / 1000));
+            processingRate.put(executorId, nowCompleted / (metricsRetreiveInterval / 1000.0));
+            avgProcessingRate.put(executorId, totalCompleted / (timeIndex - n0 + 1) / (metricsRetreiveInterval / 1000.0));
+            avgArrivalRate.put(executorId, totalArrived / (timeIndex - n0 + 1) / (metricsRetreiveInterval / 1000.0));
+
+
+            if(timeIndex >= 2 * windowReq) {
+                regression.addData(prPerCpu, pgFaultPerCpu);
+//                maxMPFPerCpu = regression.getIntercept();
+                validRate.put(executorId, 1 - pgFaultPerCpu / maxMPFPerCpu);
+            }
         }
     }
 
@@ -204,5 +241,9 @@ public class Model {
 
     public Map<String, Double> getArrivalRateInDelay(){
         return executorArrivalRateInDelay;
+    }
+
+    public Map<String, Double> getInstantDelay(){
+        return executorInstantaneousDelay;
     }
 }

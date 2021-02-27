@@ -30,16 +30,12 @@ public class Examiner{
         state.insert(timeIndex, substreamArrived, substreamProcessed, executorMapping);
         state.calibrate(substreamValid);
         state.drop(timeIndex, substreamValid);
-        model.updateProcessingRate(timeIndex);
 
         //Debug & Statistics
         if(true){
             System.out.println("Model, time " + timeIndex  + " , executors completed: " + model.executorCompleted);
             System.out.println("Model, time " + timeIndex  + " , executors arrived: " + model.executorArrived);
-            System.out.println("Model, time " + timeIndex  + " , processing Rate: " + model.processingRate);
-            System.out.println("Model, time " + timeIndex  + " , average processing Rate: " + model.avgProcessingRate);
-            System.out.println("Model, time " + timeIndex  + " , average arrival Rate: " + model.avgArrivalRate);
-            System.out.println("Model, time " + timeIndex  + " , average cpu usage: " + state.executorState.avgCpuUsage);
+//            System.out.println("Model, time " + timeIndex  + " , average cpu usage: " + state.executorState.avgCpuUsage);
         }
 
         //Debug & Statistics
@@ -56,6 +52,7 @@ public class Examiner{
     }
 
     public void updateModel(long timeIndex, Map<String, Double> serviceRate, Map<String, List<String>> executorMapping){
+        model.updateInformation(timeIndex);
         model.update(timeIndex, serviceRate, executorMapping);
         //Debug & Statistics
         if(true){
@@ -65,9 +62,14 @@ public class Examiner{
                 longtermDelay.put(executorId, delay);
             }
 //                System.out.println("Model, time " + timeIndex  + " , Arrival Rate: " + model.executorArrivalRate);
+            System.out.println("Model, time " + timeIndex  + " , processing Rate: " + model.processingRate);
+            System.out.println("Model, time " + timeIndex  + " , average processing Rate: " + model.avgProcessingRate);
+            System.out.println("Model, time " + timeIndex  + " , average arrival Rate: " + model.avgArrivalRate);
             System.out.println("Model, time " + timeIndex  + " , Service Rate: " + model.executorServiceRate);
             System.out.println("Model, time " + timeIndex  + " , Instantaneous Delay: " + model.executorInstantaneousDelay);
             System.out.println("Model, time " + timeIndex  + " , Arrival Rate In Delay: " + model.executorArrivalRateInDelay);
+            System.out.println("Model, time " + timeIndex  + " , Max Major Fault: " + model.maxMPFPerCpu);
+            System.out.println("Model, time " + timeIndex  + " , Valid Rate: " + model.validRate);
 //                System.out.println("Model, time " + timeIndex  + " , Longterm Delay: " + longtermDelay);
             System.out.println("Model, time " + timeIndex  + " , Partition Arrival Rate: " + model.substreamArrivalRate);
         }

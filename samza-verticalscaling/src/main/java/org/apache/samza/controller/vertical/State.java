@@ -5,10 +5,7 @@ import org.apache.samza.config.MapConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class State {
     private static final Logger LOG = LoggerFactory.getLogger(org.apache.samza.controller.vertical.State.class);
@@ -19,6 +16,10 @@ public class State {
     private long currentTimeIndex;
     final long metricsRetreiveInterval, windowReq;
     public Map<String, List<String>> executorMapping;
+
+    public final long maxPRPerCpu = 7500;
+    public final double threshold = 0.9;
+
     public State(long metricsRetreiveInterval, long windowReq) {
         this.metricsRetreiveInterval = metricsRetreiveInterval;
         this.windowReq = windowReq;
@@ -189,8 +190,8 @@ public class State {
             }
         }
 
-        System.out.println("Model, time " + timeIndex  + " , substream " + substream + " arrived: " + substreamState.arrived.get(timeIndex));
-        System.out.println("Model, time " + timeIndex  + " , substream " + substream + " completed: " + substreamState.completed.get(timeIndex));
+//        System.out.println("Model, time " + timeIndex  + " , substream " + substream + " arrived: " + substreamState.arrived.get(timeIndex));
+//        System.out.println("Model, time " + timeIndex  + " , substream " + substream + " completed: " + substreamState.completed.get(timeIndex));
         //Calculate total latency here
         for(long index = n0 + 1; index <= timeIndex; index++){
             substreamState.calculateLatency(index, windowReq);
@@ -222,8 +223,6 @@ public class State {
             }
         }
     }
-
-
 
     public void insert(long timeIndex, Map<String, Long> substreamArrived,
                         Map<String, Long> substreamProcessed,
@@ -270,12 +269,50 @@ public class State {
         return (substreamStates.get(id).arrived.containsKey(timeIndex) && substreamStates.get(id).arrived.get(timeIndex) != null && substreamStates.get(id).arrived.get(timeIndex) > 0);
     }
 
-    public Map<String, Double> getCPUUsage(){
-        return executorState.cpuUsage;
-    }
+//    public Map<String, Double> getCPUUsage(){
+//        return executorState.cpuUsage;
+//    }
 
     public Map<String, Integer> getCPUConfig(){
         return executorState.configCpu;
+    }
+
+    public Map<String, Integer> getMemConfig(){
+        return executorState.configMem;
+    }
+
+    public double getCpuUsage(long timeIndex, String executor){
+        double usage = 0.0;
+        if(executorState.cpuUsages.containsKey(timeIndex))
+            return executorState.cpuUsages.get(timeIndex).getOrDefault(executor, 0.0);
+        return usage;
+    }
+
+    public double getUsedMem(String executor){
+        return executorState.usedMem.getOrDefault(executor, 0.0);
+    }
+
+    public long getPGFault(long timeIndex, String executor){
+        long pgFault = 0l;
+        if(executorState.cpuUsages.containsKey(timeIndex))
+            return executorState.pgMajFault.get(timeIndex).getOrDefault(executor, 0l);
+        return pgFault;
+    }
+
+    public int getTotalCPU(){
+        return executorState.totalCPU;
+    }
+
+    public void updateTotalResources(){
+        int totalCPU = 0, totalMemory = 0;
+        for (Map.Entry<String, Integer> entry : executorState.configCpu.entrySet()){
+            totalCPU += entry.getValue();
+        }
+        for (Map.Entry<String, Integer> entry : executorState.configMem.entrySet()){
+            totalMemory += entry.getValue();
+        }
+        executorState.totalCPU = totalCPU;
+        executorState.totalMem = totalMemory;
     }
 
 }
@@ -335,54 +372,66 @@ class SubstreamState{
 class ExecutorState{
     private static final Logger LOG = LoggerFactory.getLogger(org.apache.samza.controller.vertical.ExecutorState.class);
     public Map<String, Integer> configMem, configCpu;
-    public Map<String, Double> usedMem, cpuUsage;
-    public Map<String, Long> pgMajFault;
-    public Map<Long, Map<String, Double>> allCpuUsage;
+    public Map<String, Double> usedMem;
+    public Map<Long, Map<String, Double>> cpuUsages;
+    public Map<Long, Map<String, Long>> pgMajFault;
+    public int totalMem = 0;
+    public int totalCPU = 0;
     long timeIndex;
     private final long windowReq;
     public ExecutorState(long windowReq){
         configMem = new HashMap<>();
         configCpu = new HashMap<>();
         usedMem = new HashMap<>();
-        cpuUsage = new HashMap<>();
+        cpuUsages = new HashMap<>();
         pgMajFault = new HashMap<>();
-        allCpuUsage = new HashMap<>();
         timeIndex = 0;
         this.windowReq = windowReq;
     }
     public void updateResource(long timeIndex, Map<String, Resource> executorResource, Map<String, Double> executorMemUsed,
                                Map<String, Double> executorCpuUsage, Map<String, Long> pgMajFault){
-
+        this.usedMem.clear();
+        this.configCpu.clear();
+        this.configMem.clear();
         this.timeIndex = timeIndex;
         executorResource.remove("000001");
+
         for(Map.Entry<String, Resource> entry : executorResource.entrySet()){
             String executor = entry.getKey();
             Resource resource = entry.getValue();
             configCpu.put(executor, resource.getVirtualCores());
             configMem.put(executor, resource.getMemory());
         }
+
         for(Map.Entry<String, Double> entry : executorMemUsed.entrySet()){
             this.usedMem.put(entry.getKey(), entry.getValue());
         }
+
+        Map<String, Double> cpuUsage = new HashMap<>();
         for(Map.Entry<String, Double> entry : executorCpuUsage.entrySet()){
-            this.cpuUsage.put(entry.getKey(), entry.getValue());
+            cpuUsage.put(entry.getKey(), entry.getValue());
         }
+        this.cpuUsages.put(timeIndex, cpuUsage);
+
+        Map<String, Long> pgFault = new HashMap<>();
         for(Map.Entry<String, Long> entry : pgMajFault.entrySet()){
-            this.pgMajFault.put(entry.getKey(), entry.getValue());
+            pgFault.put(entry.getKey(), entry.getValue());
         }
+        this.pgMajFault.put(timeIndex, pgFault);
+
 //        dropCpuUsage(timeIndex);
     }
 
     private void dropCpuUsage(long timeIndex){
         //Drop cpu usage
         List<Long> removeIndex = new LinkedList<>();
-        for(long index:allCpuUsage.keySet()){
+        for(long index:cpuUsages.keySet()){
             if(index < timeIndex - 2*windowReq){
                 removeIndex.add(index);
             }
         }
         for(long index:removeIndex){
-            allCpuUsage.remove(index);
+            cpuUsages.remove(index);
         }
         removeIndex.clear();
     }
@@ -396,8 +445,8 @@ class ExecutorState{
             LOG.warn("Calculate instant delay index smaller than window size!");
         }
         for(long i = n0; i <= timeIndex; i++){
-            if(allCpuUsage.containsKey(i)){
-                Map<String, Double> usages = allCpuUsage.get(i);
+            if(cpuUsages.containsKey(i)){
+                Map<String, Double> usages = cpuUsages.get(i);
                 for(Map.Entry<String, Double> entry: usages.entrySet()){
                     String executor = entry.getKey();
                     Double usage = entry.getValue();
