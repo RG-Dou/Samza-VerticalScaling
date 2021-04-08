@@ -62,6 +62,7 @@ class TaskCallbackImpl implements TaskCallback, Comparable<TaskCallbackImpl> {
 
   @Override
   public void complete() {
+    System.out.println("stock_id: " + envelope.getSystemStreamPartition().getPartition() + " arrival_ts: " + envelope.getTimestamp() + " completion_ts: " + System.currentTimeMillis());
     if (scheduledFuture != null) {
       scheduledFuture.cancel(true);
     }

@@ -11,6 +11,7 @@ import org.mortbay.log.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Int;
+import java.util.Random;
 
 import java.util.*;
 import java.util.function.DoubleBinaryOperator;
@@ -19,36 +20,36 @@ import java.util.function.DoubleBinaryOperator;
 
 public class VerticalScaling extends StreamSwitch {
     private static final Logger LOG = LoggerFactory.getLogger(org.apache.samza.controller.LatencyGuarantor.class);
-    private long latencyReq, windowReq; //Window requirment is stored as number of timeslot
-    private double l_low, l_high; // Check instantDelay  < l and longtermDelay < req
-    long migrationInterval;
+
+    private long currentTimeIndex;
+
     private boolean isStarted;
     private Examiner examiner;
     private Map<String, Resource> shrinks = new HashMap<String, Resource>();
     private Map<String, Resource> expands = new HashMap<String, Resource>();
-    private long cpuScalingInterval = 0, memScalingInterval = 60;
-    private long cpuScalingTime, memScalingTime = 0l;
-    private boolean memIsFly;
-    private String flyInstance = null;
+    private ArrayList<String> flyInstance = new ArrayList<>();
     private long startTime = 0;
-    private int phase = 0;
     private final ResourceChecker resourceChecker;
     private final Thread resourceCheckerThread;
+    private final int blockSize;
+    private final boolean cpuSwitch;
+    private final boolean memSwitch;
+    private final boolean processedArrivalRateSwitch;
+    private Random rnd;
 
     public VerticalScaling(Config config){
         super(config);
-        latencyReq = config.getLong("streamswitch.requirement.latency", 1000); //Unit: millisecond
-        windowReq = config.getLong("streamswitch.requirement.window", 2000) / metricsRetreiveInterval; //Unit: # of time slots
-        l_low = config.getDouble("streamswitch.system.l_low", 50); //Unit: millisecond
-        l_high = config.getDouble("streamswtich.system.l_high", 100);
-        migrationInterval = config.getLong("streamswitch.system.migration_interval", 5000l);
-//        adjustPeriod = config.getLong("streamswitch.system.delta_time", 600);
         String jobName = config.get("job.name");
-        examiner = new Examiner(config, metricsRetreiveInterval, windowReq);
+        examiner = new Examiner(config, metricsRetreiveInterval);
         isStarted = false;
-        memIsFly = false;
         resourceChecker = new ResourceChecker(jobName);
         this.resourceCheckerThread = new Thread(resourceChecker, "Resource Checker Thread");
+        currentTimeIndex = 0;
+
+        blockSize = config.getInt("verticalscaling.block.size", 30);
+        cpuSwitch = config.getBoolean("verticalscaling.cpu.switch", true);
+        memSwitch = config.getBoolean("verticalscaling.mem.switch", true);
+        processedArrivalRateSwitch = config.getBoolean("verticalscaling.processed_arrival_rate.switch", true);
     }
 
     @Override
@@ -59,22 +60,50 @@ public class VerticalScaling extends StreamSwitch {
         resourceCheckerThread.start();
     }
 
-    public void initResource(){
-        String giver1 = "000002";
-        String giver2 = "000003";
-        String giver3 = "000004";
-        String taker1 = "000005";
+    public void initResourcesMain(){
         shrinks.clear();
         expands.clear();
-//        Resource resource = Resource.newInstance(1000, 2);
-//        shrinks.put(giver1, resource);
-//        resource = Resource.newInstance(1000, 2);
-//        shrinks.put(giver2, resource);
-//        resource = Resource.newInstance(1000, 2);
-//        shrinks.put(giver3, resource);
-//        resource = Resource.newInstance(1400, 2);
-//        shrinks.put(taker1, resource);
+        int mem1 = 600, mem2 = 800, mem3 = 1000, mem4 = 1200;
+        if(resourceChecker.getNumOfContainers() != 12) {
+            startTime = 0;
+            return;
+        }
+
+        Map<String, Integer> memMap = new HashMap<>();
+        memMap.put("000002", mem1);
+        memMap.put("000003", mem2);
+        memMap.put("000004", mem3);
+        memMap.put("000005", mem4);
+        int cores = 2;
+        initResources(memMap, cores);
+        memMap.clear();
+
+        memMap.put("000006", mem1);
+        memMap.put("000007", mem2);
+        memMap.put("000008", mem3);
+        memMap.put("000009", mem4);
+        cores = 3;
+        initResources(memMap, cores);
+        memMap.clear();
+
+        memMap.put("000010", mem1);
+        memMap.put("000011", mem2);
+        memMap.put("000012", mem3);
+        memMap.put("000013", mem4);
+        cores = 4;
+        initResources(memMap, cores);
+        memMap.clear();
+
         resourceChecker.startAdjust(shrinks, expands);
+    }
+
+    private void initResources(Map<String, Integer> memMap, int cores){
+        for(Map.Entry<String, Integer> entry : memMap.entrySet()){
+            String key = entry.getKey();
+            int mem = entry.getValue();
+            Resource resource = Resource.newInstance(mem, cores);
+            shrinks.put(key, resource);
+        }
     }
 
 
@@ -82,6 +111,9 @@ public class VerticalScaling extends StreamSwitch {
     //Return state validity
     private boolean examine(long timeIndex){
         Map<String, Object> metrics = metricsRetriever.retrieveMetrics();
+        long index = adjustTimeIndex();
+        if(index > currentTimeIndex)
+            currentTimeIndex = (index + currentTimeIndex)/2;
         Map<String, Long> substreamArrived =
                 (HashMap<String, Long>) (metrics.get("Arrived"));
         Map<String, Long> substreamProcessed =
@@ -104,23 +136,17 @@ public class VerticalScaling extends StreamSwitch {
         Map<String, Long> pgMajFault = (Map<String, Long>) (metrics.get("PGMajFault"));
 
 //        System.out.println("Model, time " + timeIndex  + ", executor heap used: " + executorHeapUsed);
-        System.out.println("Model, time " + timeIndex + ", executor pg major fault: " + pgMajFault);
+        System.out.println("Model, time " + currentTimeIndex + ", executor pg major fault: " + pgMajFault);
 
         //Memory usage
         //LOG.info("Metrics size arrived size=" + substreamArrived.size() + " processed size=" + substreamProcessed.size() + " valid size=" + substreamValid.size() + " utilization size=" + executorUtilization.size());
-        if(examiner.updateState(timeIndex, substreamArrived, substreamProcessed, substreamValid, executorMapping)){
-            examiner.updateExecutorState(timeIndex, executorResources, executorMemUsed, executorCpuUsage, pgMajFault);
-            examiner.updateModel(timeIndex, executorServiceRate, executorMapping);
+        if(examiner.updateState(currentTimeIndex, substreamArrived, substreamProcessed, substreamValid, executorMapping)){
+            examiner.updateExecutorState(currentTimeIndex, executorResources, executorMemUsed, executorCpuUsage, pgMajFault);
+            examiner.updateModel(currentTimeIndex, executorServiceRate, executorMapping);
 //            examiner.updateResourceState();
             return true;
         }
         return false;
-    }
-
-    private int min(int num1, int num2){
-        if(num1 < num2)
-            return num1;
-        else return num2;
     }
 
     private Resource getTargetResource(Examiner examiner, String executor, Integer deltaMem, Integer deltaCpu){
@@ -131,6 +157,7 @@ public class VerticalScaling extends StreamSwitch {
 
 
     private Map<String, Integer> largestReminder(Map<String, Double> weights, int total){
+        System.out.println("weights: " + weights);
         double sumWeights = 0.0;
         for(Double weight : weights.values()){
             sumWeights+=weight;
@@ -267,17 +294,22 @@ public class VerticalScaling extends StreamSwitch {
     }
 
     private boolean CPUDiagnose(Examiner examiner){
-//        System.out.println("Start Diagnose CPU");
-        Map<String, Double> arrivalInDelay = examiner.model.getArrivalRateInDelay();
+        Map<String, Double> weights;
+        if(processedArrivalRateSwitch)
+            weights = examiner.model.getArrivalRateInDelay();
+        else
+            weights = examiner.model.getArrivalRate();
         Map<String, Integer> cpuConfig = examiner.state.getCPUConfig();
         int totalCPU = getTotalCPU(examiner);
         if (totalCPU < cpuConfig.size()){
             LOG.info("Total CPU size is smaller than the number of instances");
             return false;
         }
-//        Map<String, Integer> cpuQuotas = largestReminder(arrivalInDelay, totalCPU);
-        Map<String, Integer> cpuQuotas = largestLatency(arrivalInDelay, totalCPU, examiner.model.getInstantDelay());
-        System.out.println(cpuQuotas);
+        if(weights.size() != cpuConfig.size())
+            return false;
+        Map<String, Integer> cpuQuotas = largestReminder(weights, totalCPU);
+
+//        Map<String, Integer> cpuQuotas = largestLatency(arrivalRate, totalCPU, examiner.model.getInstantDelay());
         boolean flag = false;
         for (Map.Entry<String, Integer> entry : cpuQuotas.entrySet()){
             String executor = entry.getKey();
@@ -293,86 +325,107 @@ public class VerticalScaling extends StreamSwitch {
                 shrinks.put(executor, target);
             }
         }
+        System.out.println("targets: "+cpuQuotas);
         return flag;
     }
 
+    private void insertToList(List<String> list, String key, Map<String, Double> values, boolean ascending){
+        if (list.size() == 0) {
+            list.add(key);
+        } else{
+            int index = list.size();
+            if(ascending){
+                for(int i = 0; i < list.size(); i ++){
+                    if(values.get(key) < values.get(list.get(i))){
+                        index = i;
+                        break;
+                    }
+                }
+            } else {
+                for(int i = 0; i < list.size(); i ++){
+                    if(values.get(key) > values.get(list.get(i))){
+                        index = i;
+                        break;
+                    }
+                }
+            }
+            list.add(index, key);
+        }
+    }
+
     private boolean memDiagnose(Examiner examiner){
-        String maxLatencyNode = null;
-        double maxLatency = 0.0;
+        if (flyInstance.size() > 0)
+            checkMemDone(examiner);
         Map<String, Double> latencies = examiner.model.getInstantDelay();
         Map<String, Double> validRates = examiner.model.validRate;
-        for(Map.Entry<String, Double> entry : latencies.entrySet()){
-            String node = entry.getKey();
-            double latency = entry.getValue();
-            if(latency > maxLatency){
-                maxLatency = latency;
-                maxLatencyNode = node;
-            }
-        }
-        if (maxLatencyNode == null)
-            return false;
 
-        double maxNodeValidRate = 0.0;
-        if(validRates.containsKey(maxLatencyNode)){
-            maxNodeValidRate = validRates.get(maxLatencyNode);
-        } else {
-            LOG.info("No node: " + maxLatencyNode + " in valid rates: " + validRates);
-        }
-        if (maxNodeValidRate >= 0.9) {
-            return false;
-        }
-
-        String giverNode = null;
-        double giverRate = 0.0;
-        validRates.remove(maxLatencyNode);
-        for (Map.Entry<String, Double> entry : validRates.entrySet()){
-            double rate = entry.getValue();
-            String node = entry.getKey();
-            if(examiner.state.getMemConfig().get(node) <= 600){
+        ArrayList<String> rich = new ArrayList<>();
+        ArrayList<String> poor = new ArrayList<>();
+        for(Map.Entry<String, Double> entry : validRates.entrySet()){
+            if(flyInstance.contains(entry.getKey()))
                 continue;
-            }
-            if(rate >= giverRate){
-                giverNode = node;
-                giverRate = rate;
-            }
+            if (entry.getValue() >= 0.9)
+                insertToList(rich, entry.getKey(), latencies, true);
+            else
+                insertToList(poor, entry.getKey(), latencies, false);
         }
 
-        if(giverRate < maxNodeValidRate) {
+        System.out.println("Latency: " + latencies);
+        System.out.println("Valid Ratios: " + validRates);
+        System.out.println("Poor: " + poor);
+        System.out.println("Rich: " + rich);
+
+        if(rich.size() == 0 && poor.size() > 1){
+            String giverNode = poor.get(poor.size() - 1);
+            String takerNode = poor.get(0);
+            Resource resource1 = getTargetResource(examiner, takerNode, blockSize, 0);
+            expands.put(takerNode, resource1);
+            Resource resource2 = getTargetResource(examiner, giverNode, -blockSize, 0);
+            shrinks.put(giverNode, resource2);
+            flyInstance.add(takerNode);
+        } else if (poor.size() > 0){
+            int length = Math.min(poor.size(), rich.size());
+            for(int i = 0; i < length; i ++){
+                String giverNode = rich.get(i);
+                String takerNode = poor.get(i);
+                Resource resource1 = getTargetResource(examiner, takerNode, blockSize, 0);
+                expands.put(takerNode, resource1);
+                Resource resource2 = getTargetResource(examiner, giverNode, -blockSize, 0);
+                shrinks.put(giverNode, resource2);
+                flyInstance.add(takerNode);
+            }
+
+//            rnd = new Random(rich.size());
+//            String giverNode = rich.get(rnd.nextInt());
+//            String takerNode = poor.get(0);
+//            Resource resource1 = getTargetResource(examiner, takerNode, blockSize, 0);
+
+        } else {
             return false;
         }
-
-        if(giverNode == null)
-            return false;
-        System.out.println(maxLatency);
-        System.out.println(giverNode);
-        Resource resource1 = getTargetResource(examiner, maxLatencyNode, 30, 0);
-        expands.put(maxLatencyNode, resource1);
-        Resource resource2 = getTargetResource(examiner, giverNode, -30, 0);
-        shrinks.put(giverNode, resource2);
-        flyInstance = maxLatencyNode;
         return true;
     }
 
     private void checkMemDone(Examiner examiner){
-        int configMem = examiner.state.getMemConfig().get(flyInstance);
-        double usedMem = examiner.state.getUsedMem(flyInstance);
-        if(configMem - usedMem < 15)
-            memIsFly = false;
+        ArrayList<String> takers = new ArrayList<>(flyInstance);
+        for(String taker: takers) {
+            if(!examiner.state.getMemConfig().containsKey(taker))
+                continue;
+            int configMem = examiner.state.getMemConfig().get(taker);
+            double usedMem = examiner.state.getUsedMem(taker);
+            System.out.println("Check Mem Done: executor: " + taker + ", config: " + configMem + ", used: " + usedMem);
+            if (configMem - usedMem < blockSize)
+                flyInstance.remove(taker);
+        }
     }
 
 
     private boolean diagnose(Examiner examiner, long timeIndex) {
 //        System.out.println("timeIndex: " + timeIndex + ", Scaling Time: " + cpuScalingTime);
-//        if (((timeIndex - cpuScalingTime) > cpuScalingInterval) && CPUDiagnose(examiner)) {
-//            cpuScalingTime = timeIndex;
-//            return true;
-//        }
-//        if (memIsFly)
-//            checkMemDone(examiner);
-//        else if (memDiagnose(examiner)){
-//            memIsFly = true;
-//            return true;
-//        }
+        if (cpuSwitch && CPUDiagnose(examiner))
+            return true;
+        if (memSwitch && memDiagnose(examiner))
+            return true;
         return false;
     }
 
@@ -383,21 +436,25 @@ public class VerticalScaling extends StreamSwitch {
         String container4 = "000004";
         String container5 = "000005";
 
-        if(phase == 0){
-//            Resource target = Resource.newInstance(3000, 6);
-//            expands.put(container2, target);
-//        } else if (phase == 1){
-//            Resource target = Resource.newInstance(900, 4);
-//            expands.put(container3, target);
-//        } else if (phase == 2){
-//            Resource target = Resource.newInstance(800, 4);
-//            expands.put(container4, target);
-//        } else if (phase == 3){
-//            Resource target = Resource.newInstance(500, 5);
-//            shrinks.put(container5, target);
+        if(currentTimeIndex > 6300){
+            Resource target2 = Resource.newInstance(900, 1);
+            shrinks.put(container2, target2);
+            Resource target3 = Resource.newInstance(900, 1);
+            shrinks.put(container3, target3);
+            Resource target4 = Resource.newInstance(1400, 1);
+            shrinks.put(container4, target4);
+            Resource target5 = Resource.newInstance(1400, 5);
+            expands.put(container5, target5);
+        } else if(currentTimeIndex > 13700){
+            Resource target2 = Resource.newInstance(900, 2);
+            expands.put(container2, target2);
+            Resource target3 = Resource.newInstance(900, 2);
+            expands.put(container3, target3);
+            Resource target4 = Resource.newInstance(1400, 2);
+            expands.put(container4, target4);
+            Resource target5 = Resource.newInstance(1400, 2);
+            shrinks.put(container5, target5);
         }
-
-        phase ++;
         return true;
     }
 
@@ -405,21 +462,22 @@ public class VerticalScaling extends StreamSwitch {
 
     //Main logic:  examine->diagnose->treatment->sleep
     void work(long timeIndex) {
-
-        if(startTime == 0) {
-            initResource();
-            startTime = 1;
-        }
         LOG.info("Examine...");
         //Examine
+        currentTimeIndex = timeIndex;
         boolean stateValidity = examine(timeIndex);
+
+        if(startTime == 0) {
+            startTime = 1;
+            initResourcesMain();
+        }
         if (resourceChecker.isSleeping()) {
 
             //Check is started
             if (!isStarted) {
                 LOG.info("Check started...");
                 for (int id : examiner.state.substreamStates.keySet()) {
-                    if (examiner.state.checkArrivedPositive(id, timeIndex)) {
+                    if (examiner.state.checkArrivedPositive(id, currentTimeIndex)) {
                         isStarted = true;
                         break;
                     }
@@ -427,39 +485,16 @@ public class VerticalScaling extends StreamSwitch {
             }
 
 //           System.out.println("state: "+stateValidity + ", is start:" + isStarted);
-            if (timeIndex > 10 && stateValidity && isStarted) {
+            if (currentTimeIndex > 1250 && stateValidity && isStarted) {
                 shrinks.clear();
                 expands.clear();
-                if (diagnose(examiner, timeIndex)) {
+                if (diagnose(examiner, currentTimeIndex)) {
+//                if (diagnose_test(examiner)) {
                     resourceChecker.startAdjust(shrinks, expands);
                 }
 
             }
         }
-
-//        try {
-//            Thread.sleep(deltaTime);
-//        } catch (InterruptedException e) {
-//            LOG.error("Interrupted in job coordinator loop {} ", e);
-//            Thread.currentThread().interrupt();
-//        }
-
-//
-//        if (stateValidity && !isMigrating && isStarted){
-//            LOG.info("Diagnose...");
-//            //Diagnose
-//            Prescription pres = diagnose(examiner);
-//            if (pres.migratingSubstreams != null) {
-//                //Treatment
-//                treat(pres);
-//            } else {
-//                LOG.info("Nothing to do this time.");
-//            }
-//        } else {
-//            if (!stateValidity) LOG.info("Current examine data is not valid, need to wait until valid");
-//            else if (isMigrating) LOG.info("One migration is in process");
-//            else LOG.info("Too close to last migration");
-//        }
     }
 
     @Override

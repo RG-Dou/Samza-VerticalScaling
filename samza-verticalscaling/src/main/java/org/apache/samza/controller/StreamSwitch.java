@@ -123,4 +123,10 @@ public abstract class StreamSwitch implements OperatorController{
         String retrieverFactoryClassName = config.getOrDefault("streamswitch.system.metrics_retriever.factory", "org.apache.samza.controller.JMXMetricsRetrieverFactory");
         return Util.getObj(retrieverFactoryClassName, StreamSwitchMetricsRetrieverFactory.class).getRetriever(config);
     }
+
+    public long adjustTimeIndex(){
+        long deltaT = System.currentTimeMillis() - startTime;
+        long nextIndex = deltaT / metricsRetreiveInterval + 1;
+        return nextIndex;
+    }
 }

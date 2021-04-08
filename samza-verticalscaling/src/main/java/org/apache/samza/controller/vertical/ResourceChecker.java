@@ -68,10 +68,16 @@ public class ResourceChecker implements Runnable {
         }
     }
 
+    private String getContainerIdForYarn(String taskId){
+        String fullId = clientMetrics.getFullContainerId(taskId);
+        return fullId.substring(fullId.length() - 6);
+    }
+
     private void resize(Map<String, Resource> containers){
         for (Map.Entry<String, Resource> entry : containers.entrySet()){
 //            LOG.info("ID" + entry.getKey() + ", cpu: " + entry.getValue().getVirtualCores() + ", mem: " + entry.getValue().getMemory());
-            listener.containerResize(entry.getKey(), entry.getValue().getVirtualCores(), entry.getValue().getMemory());
+            String containerId = getContainerIdForYarn(entry.getKey());
+            listener.containerResize(containerId, entry.getValue().getVirtualCores(), entry.getValue().getMemory());
         }
     }
 
@@ -122,10 +128,8 @@ public class ResourceChecker implements Runnable {
     private boolean checkMemConsistency(String fileName, int targetMem){
         Long cgroupMem = Long.parseLong(getCGroupParam(fileName)) / 1024 / 1024;
         if(cgroupMem == targetMem) {
-            LOG.info("No need to adjust memory");
             return true;
         } else {
-            LOG.info("We have to adjust memory");
             return false;
         }
     }
@@ -135,7 +139,7 @@ public class ResourceChecker implements Runnable {
         try {
             byte[] contents = Files.readAllBytes(Paths.get(cGroupParamPath));
             String s = new String(contents, "UTF-8");
-            LOG.info("cgroup tell us: " + s);
+//            LOG.info("cgroup tell us: " + s);
             return new String(contents, "UTF-8").trim();
         } catch (IOException e) {
             LOG.info("Unable to read from " + cGroupParamPath);
@@ -206,5 +210,9 @@ public class ResourceChecker implements Runnable {
 
     public void setListener(OperatorControllerListener listener){
         this.listener = listener;
+    }
+
+    public long getNumOfContainers(){
+        return this.clientMetrics.getNumOfContainers();
     }
 }

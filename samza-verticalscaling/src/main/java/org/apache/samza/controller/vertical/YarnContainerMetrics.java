@@ -191,4 +191,8 @@ public class YarnContainerMetrics {
         this.contaienrIdMap = contaienrIdMap;
     }
 
+    public long getNumOfContainers(){
+        return this.contaienrIdMap.size();
+    }
+
 }

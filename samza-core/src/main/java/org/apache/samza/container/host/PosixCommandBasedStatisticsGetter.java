@@ -60,8 +60,8 @@ public class PosixCommandBasedStatisticsGetter implements SystemStatisticsGetter
     // returns a single long value that represents the rss memory of the process.
     String commandOutput = getCommandOutput(new String[]{"sh", "-c", "ps -o rss= -p $PPID"});
     //DrG
-    System.out.println((new String[]{"sh", "-c", "ps -o rss= -p $PPID"}).toString());
-    System.out.println("command out put: " + commandOutput);
+//    System.out.println((new String[]{"sh", "-c", "ps -o rss= -p $PPID"}).toString());
+//    System.out.println("command out put: " + commandOutput);
 
     // this should never happen.
     if (commandOutput == null) {

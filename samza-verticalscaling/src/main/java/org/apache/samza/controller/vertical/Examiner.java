@@ -14,11 +14,9 @@ public class Examiner{
     private static final Logger LOG = LoggerFactory.getLogger(org.apache.samza.controller.vertical.Examiner.class);
     public Model model;
     public State state;
-    final long windowReq;
-    public Examiner(Config config, long metricsRetreiveInterval, long windowReq){
-        this.windowReq = windowReq;
-        state = new State(metricsRetreiveInterval, windowReq);
-        model = new Model(state, config, metricsRetreiveInterval, windowReq);
+    public Examiner(Config config, long metricsRetreiveInterval){
+        state = new State(config, metricsRetreiveInterval);
+        model = new Model(state, config, metricsRetreiveInterval);
     }
 
     public void init(Map<String, List<String>> executorMapping){
@@ -32,11 +30,11 @@ public class Examiner{
         state.drop(timeIndex, substreamValid);
 
         //Debug & Statistics
-        if(true){
-            System.out.println("Model, time " + timeIndex  + " , executors completed: " + model.executorCompleted);
-            System.out.println("Model, time " + timeIndex  + " , executors arrived: " + model.executorArrived);
+//        if(true){
+//            System.out.println("Model, time " + timeIndex  + " , executors completed: " + model.executorCompleted);
+//            System.out.println("Model, time " + timeIndex  + " , executors arrived: " + model.executorArrived);
 //            System.out.println("Model, time " + timeIndex  + " , average cpu usage: " + state.executorState.avgCpuUsage);
-        }
+//        }
 
         //Debug & Statistics
         HashMap<Integer, Long> arrived = new HashMap<>(), completed = new HashMap<>();
@@ -52,39 +50,41 @@ public class Examiner{
     }
 
     public void updateModel(long timeIndex, Map<String, Double> serviceRate, Map<String, List<String>> executorMapping){
-        model.updateInformation(timeIndex);
+//        if(timeIndex > 5000)
+        model.updateRegressionModel(timeIndex);
+        model.updateValidRatio(timeIndex);
         model.update(timeIndex, serviceRate, executorMapping);
         //Debug & Statistics
         if(true){
-            HashMap<String, Double> longtermDelay = new HashMap<>();
-            for(String executorId: executorMapping.keySet()){
-                double delay = model.getLongTermDelay(executorId);
-                longtermDelay.put(executorId, delay);
-            }
-//                System.out.println("Model, time " + timeIndex  + " , Arrival Rate: " + model.executorArrivalRate);
-            System.out.println("Model, time " + timeIndex  + " , processing Rate: " + model.processingRate);
+//            HashMap<String, Double> longtermDelay = new HashMap<>();
+//            for(String executorId: executorMapping.keySet()){
+//                double delay = model.getLongTermDelay(executorId);
+//                longtermDelay.put(executorId, delay);
+//            }
+            System.out.println("Model, time " + timeIndex  + " , Arrival Rate: " + model.executorArrivalRate);
+            System.out.println("Model, time " + timeIndex  + " , processing Rate: " + model.executorProcessingRate);
             System.out.println("Model, time " + timeIndex  + " , average processing Rate: " + model.avgProcessingRate);
             System.out.println("Model, time " + timeIndex  + " , average arrival Rate: " + model.avgArrivalRate);
-            System.out.println("Model, time " + timeIndex  + " , Service Rate: " + model.executorServiceRate);
+//            System.out.println("Model, time " + timeIndex  + " , Service Rate: " + model.executorServiceRate);
             System.out.println("Model, time " + timeIndex  + " , Instantaneous Delay: " + model.executorInstantaneousDelay);
-            System.out.println("Model, time " + timeIndex  + " , Arrival Rate In Delay: " + model.executorArrivalRateInDelay);
+            System.out.println("Model, time " + timeIndex  + " , Processed Arrival Rate: " + model.executorArrivalRateInDelay);
             System.out.println("Model, time " + timeIndex  + " , Max Major Fault: " + model.maxMPFPerCpu);
             System.out.println("Model, time " + timeIndex  + " , Valid Rate: " + model.validRate);
 //                System.out.println("Model, time " + timeIndex  + " , Longterm Delay: " + longtermDelay);
-            System.out.println("Model, time " + timeIndex  + " , Partition Arrival Rate: " + model.substreamArrivalRate);
+//            System.out.println("Model, time " + timeIndex  + " , Partition Arrival Rate: " + model.substreamArrivalRate);
         }
     }
-    private Map<String, Double> getInstantDelay(){
-        return model.executorInstantaneousDelay;
-    }
-
-    private Map<String, Double> getLongtermDelay(){
-        HashMap<String, Double> delay = new HashMap<>();
-        for(String executor: state.executorMapping.keySet()){
-            delay.put(executor, model.getLongTermDelay(executor));
-        }
-        return delay;
-    }
+//    private Map<String, Double> getInstantDelay(){
+//        return model.executorInstantaneousDelay;
+//    }
+//
+//    private Map<String, Double> getLongtermDelay(){
+//        HashMap<String, Double> delay = new HashMap<>();
+//        for(String executor: state.executorMapping.keySet()){
+//            delay.put(executor, model.getLongTermDelay(executor));
+//        }
+//        return delay;
+//    }
 
     //DrG
     public void updateExecutorState(long timeIndex, Map<String, Resource> executorResource, Map<String, Double> executorMemUsed,

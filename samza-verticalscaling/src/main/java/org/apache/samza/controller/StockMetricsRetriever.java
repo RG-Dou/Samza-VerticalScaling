@@ -15,8 +15,8 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import java.net.URL;
 import java.net.URLConnection;
+import java.text.NumberFormat;
 import java.util.*;
-import java.util.concurrent.*;
 
 
 //Under development
@@ -26,8 +26,8 @@ import java.util.concurrent.*;
     Connect to JMX server accordingly
 */
 
-public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
-    private static final Logger LOG = LoggerFactory.getLogger(JMXMetricsRetriever.class);
+public class StockMetricsRetriever implements StreamSwitchMetricsRetriever {
+    private static final Logger LOG = LoggerFactory.getLogger(org.apache.samza.controller.StockMetricsRetriever.class);
     static class YarnLogRetriever{
         //String YARNHomePage;
         //String appId;
@@ -234,9 +234,9 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         JMXclient(){
         }
         private boolean isWaterMark(ObjectName name, String topic){
-            return name.getDomain().equals("org.apache.samza.system.kafka.KafkaSystemConsumerMetrics") && name.getKeyProperty("name").startsWith("kafka-" + topic + "-") && name.getKeyProperty("name").contains("-high-watermark") && !name.getKeyProperty("name").contains("-messages-behind-high-watermark");
-//                    && !name.getKeyProperty("name").contains("window-count") && !name.getKeyProperty("name").contains(topic + "-changelog-")
-//                    && name.getKeyProperty("type").startsWith("samza-container-"); //For join operator
+            return name.getDomain().equals("org.apache.samza.system.kafka.KafkaSystemConsumerMetrics") && name.getKeyProperty("name").startsWith("kafka-" + topic + "-") && name.getKeyProperty("name").contains("-high-watermark") && !name.getKeyProperty("name").contains("-messages-behind-high-watermark")
+                    && !name.getKeyProperty("name").contains("window-count") && !name.getKeyProperty("name").contains(topic + "-changelog-")
+                    && name.getKeyProperty("type").startsWith("samza-container-"); //For join operator
         }
         private boolean isCheckpoint(ObjectName name, String topic){
             return name.getDomain().equals("org.apache.samza.checkpoint.OffsetManagerMetrics") && name.getKeyProperty("name").startsWith("kafka-" + topic + "-") && name.getKeyProperty("name").endsWith("-loaded-checkpointed-offset")
@@ -347,7 +347,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
                         String ok = mbsc.getAttribute(name, "Count").toString();
                         String partitionId = name.getKeyProperty("type");
                         partitionId = partitionId.substring(partitionId.indexOf("Partition") + 10);
-//                        LOG.info("Partition ID: " + partitionId + ", Processed Message: " + ok);
+                        //LOG.info("Retrieved: " + ok);
                         partitionProcessed.put(partitionId, ok);
                     }else if(isExecutorUtilization(name)){ // Utilization
                         String ok = mbsc.getAttribute(name, "Value").toString();
@@ -381,7 +381,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
                         String ok = mbsc.getAttribute(name, "Value").toString();
                         metrics.put("SystemHeapMemUsage", Double.parseDouble(ok));
 //                        LOG.info("Used Heap Memory: " + ok);
-                    }else if(isSystemNonHeapMemUsage(name)){ // Utilization
+                    }else if(isSystemNonHeapMemUsage(name)) { // Utilization
                         String ok = mbsc.getAttribute(name, "Value").toString();
                         metrics.put("SystemNonHeapMemUsage", Double.parseDouble(ok));
 //                        LOG.info("Used Non Heap Memory: " + ok);
@@ -422,6 +422,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
                             }
                         }
                     }
+
                 }
             }catch (Exception e){
                 LOG.warn("Exception when retrieving " + containerId + "'s metrics from " + url + " : " + e);
@@ -436,10 +437,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
             }
             return metrics;
         }
-
     }
-
-
     Config config;
     Map<String, String> containerRMI;
     YarnLogRetriever yarnLogRetriever;
@@ -447,7 +445,8 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
     List<String> topics;
     JMXclient jmxClient;
     Map<String, Object> metrics;
-    public JMXMetricsRetriever(Config config){
+    Map<String, Integer> partitionStartPoint;
+    public StockMetricsRetriever(Config config){
         this.config = config;
         yarnLogRetriever = new YarnLogRetriever();
         YarnHomePage = config.get("yarn.web.address");
@@ -466,6 +465,14 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         jmxClient = new JMXclient();
         metrics = new HashMap<>();
         containerRMI = new HashMap<>();
+        partitionStartPoint = new HashMap<>();
+//        int [] startPoint = {9954, 7955, 4566, 4367, 18672, 10543, 5670, 6634, 16108, 4922, 7018, 5216, 5823, 5733, 8090, 5030, 10036, 4077, 7158, 10781, 4856, 6127, 4295, 5155, 5013, 5700, 6602, 6195, 10296, 6031, 6913, 6853, 3658, 6453, 7579, 7246, 9113, 4935, 7329, 5368, 7272, 6021, 6146, 8608, 5313, 4662, 7955, 10148, 5597, 3846, 7188, 4703, 5206, 4449, 9389, 3809, 5084, 2960, 6869, 5165, 4953, 3995, 3409, 9692};
+        int [] startPoint = new int[64];
+        for(int i = 0; i < 64; i++){
+            startPoint[i] = 1;
+            partitionStartPoint.put("Partition " + String.valueOf(i), startPoint[i]);
+        }
+        LOG.info("Partition startpoint: " + partitionStartPoint);
     }
 
     @Override
@@ -490,11 +497,11 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         executorCpuUsage = new HashMap<>();
 
         partitionValid = new HashMap<>();
-
+        retProcessed = new HashMap<>();
+        retArrived = new HashMap<>();
     }
     /*
         Currently, metrics retriever only support one topic metrics
-
         Attention:
         1) BeginOffset is set to be the initial highwatermark, so please don't give any input at the beginning.
         2) After migration, containers still contain migrated partitions' metrics (offset)
@@ -505,6 +512,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
     HashMap<String, Long> partitionProcessed, partitionArrived, executorPGMajFault;
     HashMap<String, Resource> executorResources;
     HashMap<String, HashMap<String, Long>> executorCpuStat;
+    HashMap<String, Long> retProcessed, retArrived;
     HashMap<String, Double> executorUtilization, executorServiceRate, executorMemoryUsed,
             executorHeapCommitted, executorHeapUsed, executorNonHeapCommitted, executorNonHeapUsed, executorCpuUsage;
     HashMap<String, Boolean> executorRunning;
@@ -546,7 +554,9 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
 
         Map<String, String> containerIDMap = new HashMap<>();
         yarnLogRetriever.retrieveContainerJMX(containerRMI, containers, containerIDMap);
-//        System.out.println("container Id Map: " + containerIDMap);
+        YarnContainerMetrics yarnMetics = new YarnContainerMetrics(this.jobName);
+        yarnMetics.setContaienrIdMap(containerIDMap);
+
         containers.clear();
 
         //Debugging
@@ -570,8 +580,10 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         executorNonHeapCommitted.clear();
         executorCpuUsage.clear();
         partitionValid.clear();
-        metrics.put("Arrived", partitionArrived);
-        metrics.put("Processed", partitionProcessed);
+        retArrived.clear();
+        retProcessed.clear();
+        metrics.put("Arrived", retArrived);
+        metrics.put("Processed", retProcessed);
         metrics.put("Utilization", executorUtilization);
         metrics.put("Running", executorRunning);
         metrics.put("Validity", partitionValid); //For validation check
@@ -592,8 +604,6 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         for(Map.Entry<String, String> entry: containerRMI.entrySet()){
             String containerId = entry.getKey();
             Map<String, Object> ret = jmxClient.retrieveMetrics(containerId, topics, entry.getValue());
-            if (ret == null)
-                continue;
 
             if(ret.containsKey("PartitionCheckpoint")){
                 HashMap<String, HashMap<String, String>> checkpoint = (HashMap<String, HashMap<String, String>>)ret.get("PartitionCheckpoint");
@@ -739,8 +749,23 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
                 partitionArrived.put("Partition " + partitionId, arrived);
             }
         }
-        YarnContainerMetrics yarnMetics = new YarnContainerMetrics(this.jobName);
-        yarnMetics.setContaienrIdMap(containerIDMap);
+        // Remove initial input which before actual running
+        for(String partition: partitionArrived.keySet()){
+            long arrived = partitionArrived.get(partition) - partitionStartPoint.get(partition) - 1;
+            retArrived.put(partition, arrived);
+            if(arrived < 0){
+                partitionValid.put(partition, false);
+            }
+        }
+
+        for(String partition: partitionProcessed.keySet()){
+            long processed = partitionProcessed.get(partition) - partitionStartPoint.get(partition) - 1;
+            retProcessed.put(partition, processed);
+            if(processed < 0){
+                partitionValid.put(partition, false);
+            }
+        }
+
 
         Map<String, Resource> ret = yarnMetics.getAllMetrics();
         for(Map.Entry<String, Resource> ent : ret.entrySet()) {
@@ -758,7 +783,6 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         }
 
         LOG.info("Retrieved Metrics: " + metrics);
-
         return metrics;
     }
 }
