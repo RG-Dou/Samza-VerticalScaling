@@ -313,6 +313,7 @@ class KafkaConsumerProxy<K, V> {
       Object value = record.value();
       IncomingMessageEnvelope imEnvelope =
           new IncomingMessageEnvelope(ssp, String.valueOf(record.offset()), key, value, getRecordSize(record));
+      imEnvelope.setTimestamp(record.timestamp());
       messages.add(imEnvelope);
     }
     if (LOG.isDebugEnabled()) {

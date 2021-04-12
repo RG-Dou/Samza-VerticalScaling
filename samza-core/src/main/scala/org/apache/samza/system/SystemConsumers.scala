@@ -354,6 +354,7 @@ class SystemConsumers (
       }
 
       if (deserializedEnvelope.isDefined) {
+        deserializedEnvelope.get.setTimestamp(rawEnvelope.getTimestamp)
         chooser.update(deserializedEnvelope.get)
         updated = true
       }
