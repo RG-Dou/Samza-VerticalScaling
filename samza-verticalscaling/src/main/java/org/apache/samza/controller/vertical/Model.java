@@ -17,10 +17,10 @@ public class Model {
     private final State state;
     Map<String, Double> substreamArrivalRate, substreamProcessingRate, executorArrivalRate, executorServiceRate, executorInstantaneousDelay, executorArrivalRateInDelay, executorProcessingRate; //Longterm delay could be calculated from arrival rate and service rate
 //    Map<String, Long> executorCompleted, executorArrived; //For debugging instant delay
-    Map<String, Double> processingRate, avgProcessingRate, avgArrivalRate;
+    Map<String, Double> processingRate, avgProcessingRate, avgArrivalRate, pRatePerCpu;
+    Map<Long, ModelData> modelDatas;
 
     public Map<String, Double> validRate;
-    private SimpleRegression regression = new SimpleRegression();
     public double maxMPFPerCpu = 100.0;
     private final long winMetrics, winRegression, winPGFault;
 
@@ -40,6 +40,8 @@ public class Model {
         avgProcessingRate = new HashMap<>();
         avgArrivalRate = new HashMap<>();
         validRate = new HashMap<>();
+        modelDatas = new HashMap<>();
+        pRatePerCpu = new HashMap<>();
 
         this.state = state;
         initialServiceRate = config.getDouble("streamswitch.system.initialservicerate", 0.2);
@@ -187,8 +189,8 @@ public class Model {
         processingRate.clear();
         avgProcessingRate.clear();
         avgArrivalRate.clear();
+        pRatePerCpu.clear();
         HashMap<String, Double> pageFaultPerCpu = new HashMap<>();
-        HashMap<String, Double> pRatePerCpu = new HashMap<>();
 
         for(String executorId: state.executorMapping.keySet()) {
             long n0 = timeIndex - winRegression + 1;
@@ -245,15 +247,33 @@ public class Model {
 //            executorArrived.put(executorId, totalArrived);
             avgProcessingRate.put(executorId, totalCompleted * 1.0 / (timeIndex - n0 + 1) / metricsRetreiveInterval);
             pageFaultPerCpu.put(executorId, pgFaultPerCpu);
-            pRatePerCpu.put(executorId, prPerCpu);
+            pRatePerCpu.put(executorId, prPerCpu / metricsRetreiveInterval);
 
-            regression.addData(prPerCpu, pgFaultPerCpu);
-//            maxMPFPerCpu = regression.getIntercept();
+//            regression.addData(prPerCpu, pgFaultPerCpu);
+            double intercept = updateModelData(prPerCpu, pgFaultPerCpu);
+            if (intercept > 0)
+                maxMPFPerCpu = intercept;
 
 
         }
         System.out.println("Model, time " + timeIndex  + " , page fault per cpu: " + pageFaultPerCpu);
         System.out.println("Model, time " + timeIndex  + " , pRate per cpu: " + pRatePerCpu);
+    }
+
+    private double updateModelData(double prPerCpu, double pgFaultPerCpu){
+        SimpleRegression regression = new SimpleRegression();
+        long index = (long) Math.floor(pgFaultPerCpu);
+        ModelData data = modelDatas.get(index);
+        if (data == null){
+            data = new ModelData(index);
+        }
+        data.addData(prPerCpu, pgFaultPerCpu);
+        modelDatas.put(index, data);
+        for(Map.Entry<Long, ModelData> entry : modelDatas.entrySet()){
+            ModelData tmpData = entry.getValue();
+            regression.addData(tmpData.getKey(), tmpData.getValue());
+        }
+        return regression.getIntercept();
     }
 
     public void updateValidRatio(long timeIndex){
@@ -291,8 +311,10 @@ public class Model {
             }
             double cpuUsageAvg = totalCPUUsage/cpuUsageCount;
             double pgFaultPerCpu = pgFaultAvg/cpuUsageAvg;
-
-            validRate.put(executorId, 1 - pgFaultPerCpu / maxMPFPerCpu);
+            if(maxMPFPerCpu > 0)
+                validRate.put(executorId, 1 - pgFaultPerCpu / maxMPFPerCpu);
+            else
+                validRate.put(executorId, 1.0);
         }
 
     }
@@ -328,12 +350,12 @@ public class Model {
 
             double processingRate = 0;
             for(String substream: executorMapping.get(executor)){
-                double oldArrivalRate = substreamProcessingRate.getOrDefault(substream, 0.0);
+                double oldProcessRate = substreamProcessingRate.getOrDefault(substream, 0.0);
                 if(state.getSubstreamArrived(state.substreamIdFromStringToInt(substream), timeIndex) == 0){
                     processingRate = 0;
                     break;
                 }
-                double t = oldArrivalRate * decayFactor + calculateSubstreamProcessingRate(substream, timeIndex - winMetrics, timeIndex) * (1.0 - decayFactor);
+                double t = oldProcessRate * decayFactor + calculateSubstreamProcessingRate(substream, timeIndex - winMetrics, timeIndex) * (1.0 - decayFactor);
                 substreamProcessingRate.put(substream, t);
                 processingRate += t;
             }
@@ -379,4 +401,6 @@ public class Model {
     public Map<String, Double> getInstantDelay(){
         return executorInstantaneousDelay;
     }
+
+    public Map<String, Double> getpRatePerCpu() { return pRatePerCpu;}
 }

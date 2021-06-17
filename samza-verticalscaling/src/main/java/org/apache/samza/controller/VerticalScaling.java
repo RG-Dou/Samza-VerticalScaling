@@ -35,6 +35,8 @@ public class VerticalScaling extends StreamSwitch {
     private final boolean cpuSwitch;
     private final boolean memSwitch;
     private final boolean processedArrivalRateSwitch;
+    private final String cpuAlgorithmn;
+    private final int minMemSize = 600;
     private Random rnd;
 
     public VerticalScaling(Config config){
@@ -50,6 +52,7 @@ public class VerticalScaling extends StreamSwitch {
         cpuSwitch = config.getBoolean("verticalscaling.cpu.switch", true);
         memSwitch = config.getBoolean("verticalscaling.mem.switch", true);
         processedArrivalRateSwitch = config.getBoolean("verticalscaling.processed_arrival_rate.switch", true);
+        cpuAlgorithmn = config.get("verticalscaling.cpu.algorithm", "default");
     }
 
     @Override
@@ -60,10 +63,10 @@ public class VerticalScaling extends StreamSwitch {
         resourceCheckerThread.start();
     }
 
-    public void initResourcesMain(){
+    public void initResourcesMain2(){
         shrinks.clear();
         expands.clear();
-        int mem1 = 600, mem2 = 800, mem3 = 1000, mem4 = 1200;
+        int mem1 = 600, mem2 = 700, mem3 = 800, mem4 = 900;
         if(resourceChecker.getNumOfContainers() != 12) {
             startTime = 0;
             return;
@@ -90,6 +93,96 @@ public class VerticalScaling extends StreamSwitch {
         memMap.put("000011", mem2);
         memMap.put("000012", mem3);
         memMap.put("000013", mem4);
+        cores = 5;
+        initResources(memMap, cores);
+        memMap.clear();
+
+        resourceChecker.startAdjust(shrinks, expands);
+    }
+
+    public void initResourcesMain1(){
+        shrinks.clear();
+        expands.clear();
+        int mem1 = 1000, mem2 = 1500, mem3 = 1400;
+        if(resourceChecker.getNumOfContainers() != 4) {
+            startTime = 0;
+            return;
+        }
+
+        Map<String, Integer> memMap = new HashMap<>();
+        memMap.put("000002", mem2);
+        int cores = 1;
+        initResources(memMap, cores);
+        memMap.clear();
+
+        memMap.put("000003", mem1);
+        memMap.put("000004", mem2);
+        memMap.put("000005", mem2);
+        cores = 5;
+        initResources(memMap, cores);
+        memMap.clear();
+
+        resourceChecker.startAdjust(shrinks, expands);
+    }
+
+    public void initResourcesMain4(){
+        shrinks.clear();
+        expands.clear();
+        int mem1 = 1000, mem2 = 1500, mem3 = 1250;
+        if(resourceChecker.getNumOfContainers() != 4) {
+            startTime = 0;
+            return;
+        }
+
+        Map<String, Integer> memMap = new HashMap<>();
+        memMap.put("000002", mem3);
+        int cores = 4;
+        initResources(memMap, cores);
+        memMap.clear();
+
+        memMap.put("000003", mem3);
+        memMap.put("000004", mem3);
+        memMap.put("000005", mem3);
+        cores = 4;
+        initResources(memMap, cores);
+        memMap.clear();
+
+        resourceChecker.startAdjust(shrinks, expands);
+    }
+
+    public  void initResourcesMain(){
+
+        shrinks.clear();
+        expands.clear();
+//        int mem1 = 600, mem2 = 800;
+        int mem1 = 750, mem2 = 750;
+        if(resourceChecker.getNumOfContainers() != 12) {
+            startTime = 0;
+            return;
+        }
+
+        Map<String, Integer> memMap = new HashMap<>();
+        memMap.put("000002", mem1);
+        memMap.put("000003", mem1);
+        memMap.put("000004", mem1);
+        memMap.put("000005", mem1);
+        int cores = 4;
+        initResources(memMap, cores);
+        memMap.clear();
+
+        memMap.put("000006", mem2);
+        memMap.put("000007", mem2);
+        memMap.put("000008", mem2);
+        memMap.put("000009", mem2);
+//        cores = 2;
+        cores = 4;
+        initResources(memMap, cores);
+        memMap.clear();
+
+        memMap.put("000010", mem2);
+        memMap.put("000011", mem2);
+        memMap.put("000012", mem2);
+        memMap.put("000013", mem2);
         cores = 4;
         initResources(memMap, cores);
         memMap.clear();
@@ -102,7 +195,7 @@ public class VerticalScaling extends StreamSwitch {
             String key = entry.getKey();
             int mem = entry.getValue();
             Resource resource = Resource.newInstance(mem, cores);
-            shrinks.put(key, resource);
+            expands.put(key, resource);
         }
     }
 
@@ -153,6 +246,88 @@ public class VerticalScaling extends StreamSwitch {
         Integer targetMem = examiner.state.getMemConfig().get(executor) + deltaMem;
         Integer targetCpu = examiner.state.getCPUConfig().get(executor) + deltaCpu;
         return Resource.newInstance(targetMem, targetCpu);
+    }
+
+    private long factorial(long n){
+        if (n == 0)
+            return 1;
+        if (n < 0)
+            return 0;
+        long result = 1;
+        for (int i = 1; i <= n ; i ++){
+            result *= i;
+        }
+        return result;
+    }
+
+    private double getLatencyMMK(double aRate, double pRate, int core){
+        double atop = aRate/pRate;
+        double atopc = aRate/pRate/core;
+        double pi_0 = 0;
+        for (int i = 0; i < core; i ++){
+            pi_0 += Math.pow(atop, i)/factorial(i);
+        }
+        pi_0 += Math.pow(atop, core) / factorial (core) / (1 - atopc);
+        pi_0 = 1/pi_0;
+        return Math.pow(atop, core) * pi_0 / factorial(core)/Math.pow(1 - atopc, 2)/pRate/core + 1/pRate;
+    }
+
+    private String findOptimalNode(Map<String, Double> aRates, Map<String, Double> pRates, Map<String, Integer> cores){
+        Double maxDeltaLatency = 0.0;
+        String optimalNode = null;
+        for(Map.Entry<String, Double> entry : aRates.entrySet()){
+            String node = entry.getKey();
+            double oldLatency = getLatencyMMK(entry.getValue(), pRates.get(node), cores.get(node));
+            double newLatency = getLatencyMMK(entry.getValue(), pRates.get(node), cores.get(node) + 1);
+            if((oldLatency - newLatency) * entry.getValue() > maxDeltaLatency){
+                optimalNode = node;
+            }
+        }
+        return optimalNode;
+    }
+
+    private boolean elasticutor(Examiner examiner){
+        Map<String, Double> arrivalRate = examiner.model.getArrivalRate();
+        Map<String, Double> processRatePerCpu = examiner.model.getpRatePerCpu();
+        int totalCPU = getTotalCPU(examiner);
+        Map<String, Integer> initCores = new HashMap<>();
+        for(Map.Entry<String, Double> entry : arrivalRate.entrySet()){
+            String node = entry.getKey();
+            int cores = (int) Math.floor(entry.getValue()/processRatePerCpu.get(node)) + 1;
+            initCores.put(node, cores);
+            totalCPU -= cores;
+        }
+        if(totalCPU < 0) {
+            System.out.println("No enough total CPU, require more : " + (-totalCPU));
+            return false;
+        }
+        while(totalCPU > 0){
+            totalCPU -= 1;
+            String node = findOptimalNode(arrivalRate, processRatePerCpu, initCores);
+            if (node == null){
+                return false;
+            }
+            int oldCores = initCores.get(node);
+            initCores.put(node, oldCores + 1);
+        }
+
+        Map<String, Integer> oldCores = examiner.state.getCPUConfig();
+        System.out.println("arrival rate: " + arrivalRate);
+        System.out.println("new cores: " + initCores);
+        System.out.println("old cores: " + oldCores);
+        for(Map.Entry<String, Integer> entry : oldCores.entrySet()){
+            String node = entry.getKey();
+            int oldQuota = entry.getValue();
+            int newQuota = initCores.get(node);
+            if (oldQuota < newQuota){
+                Resource target = getTargetResource(examiner, entry.getKey(), 0, newQuota - oldQuota);
+                expands.put(node, target);
+            } else if(newQuota < oldQuota){
+                Resource target = getTargetResource(examiner, entry.getKey(), 0, newQuota - oldQuota);
+                shrinks.put(node, target);
+            }
+        }
+        return true;
     }
 
 
@@ -299,6 +474,7 @@ public class VerticalScaling extends StreamSwitch {
             weights = examiner.model.getArrivalRateInDelay();
         else
             weights = examiner.model.getArrivalRate();
+        System.out.println(weights);
         Map<String, Integer> cpuConfig = examiner.state.getCPUConfig();
         int totalCPU = getTotalCPU(examiner);
         if (totalCPU < cpuConfig.size()){
@@ -358,16 +534,20 @@ public class VerticalScaling extends StreamSwitch {
             checkMemDone(examiner);
         Map<String, Double> latencies = examiner.model.getInstantDelay();
         Map<String, Double> validRates = examiner.model.validRate;
+        Map<String, Integer> configMem = examiner.state.getMemConfig();
 
         ArrayList<String> rich = new ArrayList<>();
         ArrayList<String> poor = new ArrayList<>();
         for(Map.Entry<String, Double> entry : validRates.entrySet()){
             if(flyInstance.contains(entry.getKey()))
                 continue;
-            if (entry.getValue() >= 0.9)
-                insertToList(rich, entry.getKey(), latencies, true);
-            else
+            if (entry.getValue() >= 0.9) {
+                if (configMem.get(entry.getKey()) > minMemSize) {
+                    insertToList(rich, entry.getKey(), latencies, true);
+                }
+            } else {
                 insertToList(poor, entry.getKey(), latencies, false);
+            }
         }
 
         System.out.println("Latency: " + latencies);
@@ -376,8 +556,16 @@ public class VerticalScaling extends StreamSwitch {
         System.out.println("Rich: " + rich);
 
         if(rich.size() == 0 && poor.size() > 1){
-            String giverNode = poor.get(poor.size() - 1);
             String takerNode = poor.get(0);
+            int index = poor.size() - 1;
+            String giverNode = poor.get(index);
+            while(configMem.get(giverNode) <= minMemSize + blockSize && index > 0){
+                index --;
+                giverNode = poor.get(index);
+            }
+            System.out.println("giver: " + giverNode + ", config mem: " + configMem.get(giverNode));
+            if(takerNode.equals(giverNode))
+                return false;
             Resource resource1 = getTargetResource(examiner, takerNode, blockSize, 0);
             expands.put(takerNode, resource1);
             Resource resource2 = getTargetResource(examiner, giverNode, -blockSize, 0);
@@ -394,11 +582,6 @@ public class VerticalScaling extends StreamSwitch {
                 shrinks.put(giverNode, resource2);
                 flyInstance.add(takerNode);
             }
-
-//            rnd = new Random(rich.size());
-//            String giverNode = rich.get(rnd.nextInt());
-//            String takerNode = poor.get(0);
-//            Resource resource1 = getTargetResource(examiner, takerNode, blockSize, 0);
 
         } else {
             return false;
@@ -421,11 +604,18 @@ public class VerticalScaling extends StreamSwitch {
 
 
     private boolean diagnose(Examiner examiner, long timeIndex) {
-//        System.out.println("timeIndex: " + timeIndex + ", Scaling Time: " + cpuScalingTime);
-        if (cpuSwitch && CPUDiagnose(examiner))
-            return true;
-        if (memSwitch && memDiagnose(examiner))
-            return true;
+        System.out.println("cpu algorithm: " + cpuAlgorithmn);
+        if (cpuAlgorithmn.equals("default")) {
+            if (cpuSwitch && CPUDiagnose(examiner))
+                return true;
+            if (memSwitch && memDiagnose(examiner))
+                return true;
+        } else if (cpuAlgorithmn.equals("elasticutor")){
+            if (cpuSwitch && elasticutor(examiner))
+                return true;
+            if (memSwitch && memDiagnose(examiner))
+                return true;
+        }
         return false;
     }
 
