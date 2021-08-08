@@ -312,16 +312,19 @@ class OffsetManager(
         .flatMap(restoreOffsetsFromCheckpoint(_))
         .toMap
       result.map { case (taskName, sspToOffset) => {
-          lastProcessedOffsets.put(taskName, new ConcurrentHashMap[SystemStreamPartition, String](sspToOffset.filter {
-            case (systemStreamPartition, offset) =>
-              val shouldKeep = offsetSettings.contains(systemStreamPartition.getSystemStream)
-              if (!shouldKeep) {
-                info("Ignoring previously checkpointed offset %s for %s since the offset is for a stream that is not currently an input stream." format (offset, systemStreamPartition))
-              }
-              info("Checkpointed offset is currently %s for %s" format (offset, systemStreamPartition))
-              shouldKeep
-          }.asJava))
-        }
+        lastProcessedOffsets.put(taskName, new ConcurrentHashMap[SystemStreamPartition, String](sspToOffset.filter {
+          case (systemStreamPartition, offset) =>
+            val shouldKeep = offsetSettings.contains(systemStreamPartition.getSystemStream)
+            if (!shouldKeep) {
+              info("Ignoring previously checkpointed offset %s for %s since the offset is for a stream that is not currently an input stream." format (offset, systemStreamPartition))
+            }
+            //For our calculation of processed
+            offsetManagerMetrics.loadedCheckpointedOffsets.get(systemStreamPartition).set(offset)
+            //
+            info("Checkpointed offset is currently %s for %s" format (offset, systemStreamPartition))
+            shouldKeep
+        }.asJava))
+      }
       }
     } else {
       debug("Skipping offset load from checkpoint manager because no manager was defined.")
