@@ -570,6 +570,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         executorNonHeapCommitted.clear();
         executorCpuUsage.clear();
         partitionValid.clear();
+        boolean partitionFreshed = true;
         metrics.put("Arrived", partitionArrived);
         metrics.put("Processed", partitionProcessed);
         metrics.put("Utilization", executorUtilization);
@@ -681,6 +682,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
                         }else{
                             LOG.warn(partitionId + "'s processed is still smaller then last: processed=" + partitionProcessed.get(partitionId) + " offset=" + val);
                             partitionValid.put(partitionId, true); //partitionValid.put(partitionId, false);
+                            partitionFreshed = false;
                         }
                     }
                 }
@@ -758,7 +760,7 @@ public class JMXMetricsRetriever implements StreamSwitchMetricsRetriever {
         }
 
         LOG.info("Retrieved Metrics: " + metrics);
-
+        metrics.put("Freshed", partitionFreshed);
         return metrics;
     }
 }

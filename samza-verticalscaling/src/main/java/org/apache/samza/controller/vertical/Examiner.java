@@ -65,7 +65,7 @@ public class Examiner{
             System.out.println("Model, time " + timeIndex  + " , processing Rate: " + model.executorProcessingRate);
             System.out.println("Model, time " + timeIndex  + " , average processing Rate: " + model.avgProcessingRate);
             System.out.println("Model, time " + timeIndex  + " , average arrival Rate: " + model.avgArrivalRate);
-//            System.out.println("Model, time " + timeIndex  + " , Service Rate: " + model.executorServiceRate);
+            System.out.println("Model, time " + timeIndex  + " , Service Rate: " + model.executorServiceRate);
             System.out.println("Model, time " + timeIndex  + " , Instantaneous Delay: " + model.executorInstantaneousDelay);
             System.out.println("Model, time " + timeIndex  + " , Processed Arrival Rate: " + model.executorArrivalRateInDelay);
             System.out.println("Model, time " + timeIndex  + " , Max Major Fault: " + model.maxMPFPerCpu);

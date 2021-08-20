@@ -128,24 +128,10 @@ public class VerticalScaling extends StreamSwitch {
     public void initResourcesMain4(){
         shrinks.clear();
         expands.clear();
-        int mem1 = 1000, mem2 = 1500, mem3 = 1250;
-        if(resourceChecker.getNumOfContainers() != 4) {
-            startTime = 0;
-            return;
-        }
-
-        Map<String, Integer> memMap = new HashMap<>();
-        memMap.put("000002", mem3);
-        int cores = 4;
-        initResources(memMap, cores);
-        memMap.clear();
-
-        memMap.put("000003", mem3);
-        memMap.put("000004", mem3);
-        memMap.put("000005", mem3);
-        cores = 4;
-        initResources(memMap, cores);
-        memMap.clear();
+        Resource resource = Resource.newInstance(3000, 22);
+        expands.put("000002", resource);
+        Resource resource1 = Resource.newInstance(3000, 4);
+        expands.put("000003", resource1);
 
         resourceChecker.startAdjust(shrinks, expands);
     }
@@ -659,7 +645,7 @@ public class VerticalScaling extends StreamSwitch {
 
         if(startTime == 0) {
             startTime = 1;
-            initResourcesMain();
+            initResourcesMain4();
         }
         if (resourceChecker.isSleeping()) {
 

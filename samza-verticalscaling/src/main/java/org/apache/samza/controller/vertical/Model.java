@@ -386,8 +386,8 @@ public class Model {
         //Debugging
 //                LOG.info("Debugging, avg utilization: " + utils);
 //                LOG.info("Debugging, partition arrival rate: " + substreamArrivalRate);
-//                LOG.info("Debugging, executor avg service rate: " + executorServiceRate);
-        LOG.info("Debugging, executor avg delay: " + executorInstantaneousDelay);
+//        LOG.info("Debugging, executor avg service rate: " + executorServiceRate);
+//        LOG.info("Debugging, executor avg delay: " + executorInstantaneousDelay);
     }
 
     public Map<String, Double> getArrivalRateInDelay(){
